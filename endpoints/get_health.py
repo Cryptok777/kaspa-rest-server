@@ -29,14 +29,14 @@ async def health_state():
     kaspads = []
 
     for i, kaspad_info in enumerate(kaspad_client.kaspads):
-        kaspads.append({
-            "isSynced": kaspad_info.is_synced,
-            "isUtxoIndexed": kaspad_info.is_utxo_indexed,
-            "p2pId": hashlib.sha256(kaspad_info.p2p_id.encode()).hexdigest(),
-            "kaspadHost": f"KASPAD_HOST_{i + 1}",
-            "serverVersion": kaspad_info.server_version
-        })
+        kaspads.append(
+            {
+                "isSynced": kaspad_info.is_synced,
+                "isUtxoIndexed": kaspad_info.is_utxo_indexed,
+                "p2pId": hashlib.sha256(kaspad_info.p2p_id.encode()).hexdigest(),
+                "kaspadHost": f"KASPAD_HOST_{i + 1}",
+                "serverVersion": kaspad_info.server_version,
+            }
+        )
 
-    return {
-        "kaspadServers": kaspads
-    }
+    return {"kaspadServers": kaspads}

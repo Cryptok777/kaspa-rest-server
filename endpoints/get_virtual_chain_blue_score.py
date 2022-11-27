@@ -10,7 +10,11 @@ class BlockdagResponse(BaseModel):
     blueScore: int = 260890
 
 
-@app.get("/info/virtual-chain-blue-score", response_model=BlockdagResponse, tags=["Kaspa network info"])
+@app.get(
+    "/info/virtual-chain-blue-score",
+    response_model=BlockdagResponse,
+    tags=["Kaspa network info"],
+)
 async def get_virtual_selected_parent_blue_score():
     """
     Returns the blue score of virtual selected parent

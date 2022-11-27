@@ -11,24 +11,34 @@ class BalanceResponse(BaseModel):
     balance: int = 38240000000
 
 
-@app.get("/addresses/{kaspaAddress}/balance", response_model=BalanceResponse, tags=["Kaspa addresses"])
+@app.get(
+    "/addresses/{kaspaAddress}/balance",
+    response_model=BalanceResponse,
+    tags=["Kaspa addresses"],
+)
 async def get_balance_from_kaspa_address(
-        kaspaAddress: str = Path(
-            description="Kaspa address as string e.g. kaspa:pzhh76qc82wzduvsrd9xh4zde9qhp0xc8rl7qu2mvl2e42uvdqt75zrcgpm00",
-            regex="^kaspa\:[a-z0-9]{61}$")):
+    kaspaAddress: str = Path(
+        description="Kaspa address as string e.g. kaspa:pzhh76qc82wzduvsrd9xh4zde9qhp0xc8rl7qu2mvl2e42uvdqt75zrcgpm00",
+        regex="^kaspa\:[a-z0-9]{61}$",
+    )
+):
     """
     Get balance for a given kaspa address
     """
-    resp = await kaspad_client.request("getBalanceByAddressRequest",
-                                       params={
-                                           "address": kaspaAddress
-                                       })
+    resp = await kaspad_client.request(
+        "getBalanceByAddressRequest", params={"address": kaspaAddress}
+    )
 
     try:
         resp = resp["getBalanceByAddressResponse"]
     except KeyError:
-        if "getUtxosByAddressesResponse" in resp and "error" in resp["getUtxosByAddressesResponse"]:
-            raise HTTPException(status_code=400, detail=resp["getUtxosByAddressesResponse"]["error"])
+        if (
+            "getUtxosByAddressesResponse" in resp
+            and "error" in resp["getUtxosByAddressesResponse"]
+        ):
+            raise HTTPException(
+                status_code=400, detail=resp["getUtxosByAddressesResponse"]["error"]
+            )
         else:
             raise
 
@@ -39,7 +49,4 @@ async def get_balance_from_kaspa_address(
     except KeyError:
         balance = 0
 
-    return {
-        "address": kaspaAddress,
-        "balance": balance
-    }
+    return {"address": kaspaAddress, "balance": balance}

@@ -2,7 +2,9 @@
 
 from fastapi_utils.tasks import repeat_every
 
-from endpoints.get_virtual_chain_blue_score import get_virtual_selected_parent_blue_score
+from endpoints.get_virtual_chain_blue_score import (
+    get_virtual_selected_parent_blue_score,
+)
 from server import sio, app
 
 BLOCKS_CACHE = []

@@ -24,7 +24,6 @@ async def config():
     await kaspad_client.notify("notifyBlockAddedRequest", None, on_new_block)
 
 
-
 @sio.on("last-blocks")
 async def get_last_blocks(sid, msg):
     await sio.emit("last-blocks", BLOCKS_CACHE, to=sid)
