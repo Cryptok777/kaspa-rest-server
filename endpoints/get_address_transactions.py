@@ -35,13 +35,6 @@ async def get_transactions_for_address(
     """
     Get all transactions for a given address from database
     """
-    # SELECT transactions_outputs.transaction_id, transactions_inputs.transaction_id as inp_transaction FROM transactions_outputs
-    #
-    # LEFT JOIN transactions_inputs ON transactions_inputs.previous_outpoint_hash = transactions_outputs.transaction_id AND transactions_inputs.previous_outpoint_index::int = transactions_outputs.index
-    #
-    # WHERE "script_public_key_address" = 'kaspa:qp7d7rzrj34s2k3qlxmguuerfh2qmjafc399lj6606fc7s69l84h7mrj49hu6'
-    #
-    # ORDER by transactions_outputs.transaction_id
     async with async_session() as session:
         resp = await session.execute(
             text(

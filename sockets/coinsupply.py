@@ -2,7 +2,7 @@
 
 from fastapi_utils.tasks import repeat_every
 
-from endpoints.get_circulating_supply import get_coinsupply
+from endpoints.stats import get_coinsupply
 from server import sio, app
 
 BLOCKS_CACHE = []

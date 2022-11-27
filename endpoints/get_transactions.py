@@ -72,7 +72,7 @@ async def get_transaction(
     outputs: bool = True,
 ):
     """
-    Get block information for a given block id
+    Get tx information for a given tx id
     """
     async with async_session() as s:
         tx = await s.execute(

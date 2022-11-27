@@ -3,7 +3,7 @@ import threading
 
 from fastapi_utils.tasks import repeat_every
 
-from endpoints.get_blockdag import get_blockdag
+from endpoints.stats import get_blockdag
 from server import sio, app
 
 BLOCKS_CACHE = []

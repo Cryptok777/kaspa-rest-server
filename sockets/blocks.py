@@ -1,5 +1,5 @@
 # encoding: utf-8
-import asyncio
+
 
 from server import kaspad_client, sio
 
