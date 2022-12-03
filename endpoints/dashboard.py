@@ -5,6 +5,7 @@ import requests
 import datetime, time
 from endpoints.models import (
     DashboardMetricsResponse,
+    GraphsResponse,
     MarketResponse,
     WhaleMovementResponse,
 )
@@ -138,3 +139,73 @@ async def _get_whale_movement():
 )
 async def get_whale_movement():
     return await _get_whale_movement()
+
+
+async def _get_active_address_graph():
+    sql = f"""
+                SELECT  
+                    DATE_TRUNC('day',TO_TIMESTAMP(transactions.block_time/ 1e3)) as date
+                    ,COUNT(DISTINCT(transactions_outputs.script_public_key_address))
+                FROM transactions_outputs
+                LEFT JOIN transactions
+                ON transactions.transaction_id = transactions_outputs.transaction_id
+                GROUP BY  DATE_TRUNC('day',TO_TIMESTAMP(transactions.block_time / 1e3))
+                ORDER BY date
+            """
+
+    async with async_session() as session:
+        resp = await session.execute(text(sql))
+        resp = resp.all()
+
+    result = []
+    for x in resp:
+        result.append(
+            {
+                "date": x[0].strftime("%Y-%m-%d"),
+                "count": x[1],
+            }
+        )
+
+    return result
+
+
+async def _get_tx_count_graph():
+    sql = f"""
+                SELECT  DATE_TRUNC('day',TO_TIMESTAMP(transactions.block_time/ 1e3)) AS date
+                    ,COUNT(*)
+                FROM transactions
+                GROUP BY  DATE_TRUNC('day',TO_TIMESTAMP(transactions.block_time / 1e3))
+                ORDER BY date
+            """
+
+    async with async_session() as session:
+        resp = await session.execute(text(sql))
+        resp = resp.all()
+
+    result = []
+    for x in resp:
+        result.append(
+            {
+                "date": x[0].strftime("%Y-%m-%d"),
+                "count": x[1],
+            }
+        )
+
+    return result
+
+
+async def _get_dashboard_graphs():
+    active_address_graph = await _get_active_address_graph()
+    tx_count_graph = await _get_tx_count_graph()
+    return {"active_address": active_address_graph, "tx_count": tx_count_graph}
+
+
+@app.get(
+    "/dashboard/graphs",
+    response_model=GraphsResponse | str,
+    tags=["Dashboard Controller"],
+)
+async def get_dashboard_graphs():
+    resp = await _get_dashboard_graphs()
+    print(resp)
+    return resp

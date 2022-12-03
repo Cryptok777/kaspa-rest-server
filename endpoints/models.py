@@ -101,3 +101,12 @@ class WhaleMovement(BaseModel):
 
 class WhaleMovementResponse(BaseModel):
     transactions: List[WhaleMovement]
+
+
+class GraphResponse(BaseModel):
+    date: str
+    count: int
+
+class GraphsResponse(BaseModel):
+    active_address: List[GraphResponse]
+    tx_count: List[GraphResponse]
