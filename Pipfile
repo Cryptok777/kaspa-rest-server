@@ -17,6 +17,7 @@ psycopg2 = {extras = ["async"], version = "*"}
 asyncpg = "*"
 load_dotenv = "*"
 greenlet = "*"
+cachetools = "*"
 
 [dev-packages]
 black = "*"

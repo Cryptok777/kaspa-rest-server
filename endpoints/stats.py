@@ -1,4 +1,6 @@
 # encoding: utf-8
+import os
+import requests
 import time
 from datetime import datetime
 
@@ -11,13 +13,13 @@ from endpoints.models import (
     HalvingResponse,
     HashrateResponse,
     HealthResponse,
-    KaspadInfoResponse,
+    MarketResponse,
     NetworkResponse,
 )
 from server import app, kaspad_client
+from cachetools import cached, LRUCache, TTLCache
 
 from helper.deflationary_table import DEFLATIONARY_TABLE
-from fastapi.responses import PlainTextResponse
 
 PREFIX = "info"
 
@@ -33,6 +35,18 @@ async def get_blockdag():
     return resp["getBlockDagInfoResponse"]
 
 
+def _get_block_reward(dag_info):
+    daa_score = int(dag_info["virtualDaaScore"])
+    reward = 0
+
+    for to_break_score in sorted(DEFLATIONARY_TABLE):
+        reward = DEFLATIONARY_TABLE[to_break_score]
+        if daa_score < to_break_score:
+            break
+
+    return {"blockreward": reward}
+
+
 @app.get(
     f"/{PREFIX}/blockreward",
     response_model=BlockRewardResponse | str,
@@ -43,20 +57,7 @@ async def get_blockreward(stringOnly: bool = False):
     Returns the current blockreward in KAS/block
     """
     resp = await kaspad_client.request("getBlockDagInfoRequest")
-    daa_score = int(resp["getBlockDagInfoResponse"]["virtualDaaScore"])
-
-    reward = 0
-
-    for to_break_score in sorted(DEFLATIONARY_TABLE):
-        reward = DEFLATIONARY_TABLE[to_break_score]
-        if daa_score < to_break_score:
-            break
-
-    if not stringOnly:
-        return {"blockreward": reward}
-
-    else:
-        return f"{reward:.2f}"
+    return _get_block_reward(resp["getBlockDagInfoResponse"])
 
 
 @app.get(
@@ -75,17 +76,8 @@ async def get_coinsupply():
     }
 
 
-@app.get(
-    f"/{PREFIX}/halving",
-    response_model=HalvingResponse | str,
-    tags=["Kaspa network info"],
-)
-async def get_halving(field: str | None = None):
-    """
-    Returns information about chromatic halving
-    """
-    resp = await kaspad_client.request("getBlockDagInfoRequest")
-    daa_score = int(resp["getBlockDagInfoResponse"]["virtualDaaScore"])
+def get_halving(dag_info):
+    daa_score = int(dag_info["virtualDaaScore"])
 
     future_reward = 0
     daa_breakpoint = 0
@@ -100,61 +92,18 @@ async def get_halving(field: str | None = None):
 
     next_halving_timestamp = int(time.time() + (daa_breakpoint - daa_score))
 
-    if field == "nextHalvingTimestamp":
-        return PlainTextResponse(content=str(next_halving_timestamp))
-
-    elif field == "nextHalvingDate":
-        return PlainTextResponse(
-            content=datetime.utcfromtimestamp(next_halving_timestamp).strftime(
-                "%Y-%m-%d %H:%M:%S UTC"
-            )
-        )
-
-    elif field == "nextHalvingAmount":
-        return PlainTextResponse(content=str(future_reward))
-
-    else:
-        return {
-            "nextHalvingTimestamp": next_halving_timestamp,
-            "nextHalvingDate": datetime.utcfromtimestamp(
-                next_halving_timestamp
-            ).strftime("%Y-%m-%d %H:%M:%S UTC"),
-            "nextHalvingAmount": future_reward,
-        }
+    return {
+        "nextHalvingTimestamp": next_halving_timestamp,
+        "nextHalvingDate": datetime.utcfromtimestamp(next_halving_timestamp).strftime(
+            "%Y-%m-%d %H:%M:%S UTC"
+        ),
+        "nextHalvingAmount": future_reward,
+    }
 
 
-@app.get(
-    f"/{PREFIX}/hashrate",
-    response_model=HashrateResponse | str,
-    tags=["Kaspa network info"],
-)
-async def get_hashrate(stringOnly: bool = False):
-    """
-    Returns the current hashrate for Kaspa network in TH/s.
-    """
-
-    resp = await kaspad_client.request("getBlockDagInfoRequest")
-    hashrate = resp["getBlockDagInfoResponse"]["difficulty"] * 2
-    hashrate_in_th = hashrate / 1_000_000_000_000
-
-    if not stringOnly:
-        return {"hashrate": hashrate_in_th}
-
-    else:
-        return f"{hashrate_in_th:.01f}"
-
-
-@app.get(
-    f"/{PREFIX}/kaspad", response_model=KaspadInfoResponse, tags=["Kaspa network info"]
-)
-async def get_kaspad_info():
-    """
-    Get some information for kaspad instance, which is currently connected.
-    """
-    resp = await kaspad_client.request("getInfoRequest")
-    p2p_id = resp["getInfoResponse"].pop("p2pId")
-    resp["getInfoResponse"]["p2pIdHashed"] = hashlib.sha256(p2p_id.encode()).hexdigest()
-    return resp["getInfoResponse"]
+def get_hashrate(dag_info):
+    hashrate = dag_info.get("difficulty") * 2
+    return {"hashrate": hashrate}
 
 
 @app.get(
@@ -204,3 +153,5 @@ async def health_state():
         )
 
     return {"kaspadServers": kaspads}
+
+
