@@ -1,23 +1,16 @@
 # encoding: utf-8
-import os
-import requests
 import time
 from datetime import datetime
 
-from starlette.responses import PlainTextResponse
 import hashlib
 from endpoints.models import (
     BlockRewardResponse,
     BlockdagResponse,
     CoinSupplyResponse,
-    HalvingResponse,
-    HashrateResponse,
     HealthResponse,
-    MarketResponse,
     NetworkResponse,
 )
 from server import app, kaspad_client
-from cachetools import cached, LRUCache, TTLCache
 
 from helper.deflationary_table import DEFLATIONARY_TABLE
 
@@ -153,5 +146,3 @@ async def health_state():
         )
 
     return {"kaspadServers": kaspads}
-
-

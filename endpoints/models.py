@@ -107,6 +107,50 @@ class GraphResponse(BaseModel):
     date: str
     count: int
 
+
 class GraphsResponse(BaseModel):
     active_address: List[GraphResponse]
     tx_count: List[GraphResponse]
+
+
+class TxInput(BaseModel):
+    transaction_id: str
+    index: int
+    previous_outpoint_hash: str
+    previous_outpoint_index: int
+    signature_script: str
+    amount: int | None
+    script_public_key_address: str | None
+
+    class Config:
+        orm_mode = True
+
+
+class TxOutput(BaseModel):
+    transaction_id: str
+    index: int
+    amount: int
+    script_public_key: str
+    script_public_key_address: str
+    script_public_key_type: str
+    accepting_block_hash: str | None
+
+    class Config:
+        orm_mode = True
+
+
+class TxModel(BaseModel):
+    subnetwork_id: str | None
+    transaction_id: str | None
+    hash: str | None
+    mass: str | None
+    block_hash: List[str] | None
+    block_time: int | None
+    is_accepted: bool | None
+    accepting_block_hash: str | None
+    accepting_block_blue_score: int | None
+    inputs: List[TxInput] | None
+    outputs: List[TxOutput] | None
+
+    class Config:
+        orm_mode = True

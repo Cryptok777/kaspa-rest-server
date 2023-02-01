@@ -30,7 +30,7 @@ WHALE_TX_THRESHHOLD = 1.5 * 1e7 * PRECISION
 @app.get(
     "/dashboard/metrics",
     response_model=DashboardMetricsResponse,
-    tags=["Dashboard Controller"],
+    tags=["dashboard"],
 )
 async def get_dashboard_metrics():
     dag_info = (await kaspad_client.request("getBlockDagInfoRequest")).get(
@@ -81,8 +81,8 @@ def _get_market_data_cached():
 
 @app.get(
     "/dashboard/market",
-    response_model=MarketResponse | str,
-    tags=["Dashboard Controller"],
+    response_model=MarketResponse,
+    tags=["dashboard"],
 )
 async def get_market_data():
     """
@@ -134,8 +134,8 @@ async def _get_whale_movement():
 
 @app.get(
     "/dashboard/whale_movement",
-    response_model=WhaleMovementResponse | str,
-    tags=["Dashboard Controller"],
+    response_model=WhaleMovementResponse,
+    tags=["dashboard"],
 )
 async def get_whale_movement():
     return await _get_whale_movement()
@@ -202,8 +202,8 @@ async def _get_dashboard_graphs():
 
 @app.get(
     "/dashboard/graphs",
-    response_model=GraphsResponse | str,
-    tags=["Dashboard Controller"],
+    response_model=GraphsResponse,
+    tags=["dashboard"],
 )
 async def get_dashboard_graphs():
     resp = await _get_dashboard_graphs()

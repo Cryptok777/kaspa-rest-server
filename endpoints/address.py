@@ -1,12 +1,21 @@
 # encoding: utf-8
 from typing import List
 
-from fastapi import Path, HTTPException
-from pydantic import BaseModel
+from fastapi import Path, HTTPException, Query
 from sqlalchemy import text
 
 from dbsession import async_session
+from endpoints.models import TxInput, TxModel, TxOutput
 from server import app, kaspad_client
+from datetime import datetime
+
+from pydantic import BaseModel, parse_obj_as
+from sqlalchemy.future import select
+
+from dbsession import async_session
+from endpoints import filter_fields
+from models.Block import Block
+from models.Transaction import Transaction, TransactionOutput, TransactionInput
 
 
 class BalanceResponse(BaseModel):
@@ -56,8 +65,9 @@ async def get_balance_from_kaspa_address(
 
 
 class TransactionsReceivedAndSpent(BaseModel):
-    tx_received: str
-    tx_spent: str | None
+    inputs: str
+    outputs: str | None
+    timestamp: datetime
 
 
 class TransactionForAddressResponse(BaseModel):
@@ -66,7 +76,7 @@ class TransactionForAddressResponse(BaseModel):
 
 @app.get(
     "/addresses/{kaspaAddress}/transactions",
-    response_model=TransactionForAddressResponse,
+    response_model=List[TxModel],
     response_model_exclude_unset=True,
     tags=["Kaspa addresses"],
 )
@@ -75,7 +85,16 @@ async def get_transactions_for_address(
         description="Kaspa address as string e.g. "
         "kaspa:pzhh76qc82wzduvsrd9xh4zde9qhp0xc8rl7qu2mvl2e42uvdqt75zrcgpm00",
         regex="^kaspa\:[a-z0-9]{61}$",
-    )
+    ),
+    limit: int = Query(
+        description="The number of records to get",
+        ge=1,
+        le=100,
+        default=10,
+    ),
+    offset: int = Query(
+        description="The offset from which to get records", ge=0, default=0
+    ),
 ):
     """
     Get all transactions for a given address from database
@@ -88,77 +107,132 @@ async def get_transactions_for_address(
                     transactions.block_time, transactions.transaction_id
             
             FROM transactions
+
 			LEFT JOIN transactions_outputs ON transactions.transaction_id = transactions_outputs.transaction_id
 			LEFT JOIN transactions_inputs ON transactions_inputs.previous_outpoint_hash = transactions.transaction_id AND transactions_inputs.previous_outpoint_index::int = transactions_outputs.index
+
             WHERE "script_public_key_address" = '{kaspaAddress}'
 			ORDER by transactions.block_time DESC
-			LIMIT 500"""
+            LIMIT {limit}
+            OFFSET {offset}
+            """
             )
         )
 
         resp = resp.all()
 
-    # build response
     tx_list = []
     for x in resp:
-        tx_list.append({"tx_received": x[0], "tx_spent": x[2]})
-    return {"transactions": tx_list}
+        tx_list.append(x[0])
+        tx_list.append(x[2])
 
+    tx_list = list(filter(lambda x: x != None, tx_list))
+    txs = await search_for_transactions(transactionIds=tx_list)
 
-class OutpointModel(BaseModel):
-    transactionId: str = (
-        "ef62efbc2825d3ef9ec1cf9b80506876ac077b64b11a39c8ef5e028415444dc9"
+    # fetch address/amount for input tx
+    pending_input_txs = []
+    for tx in txs:
+        for input_tx in tx.get("inputs", []):
+            pending_input_txs.append(input_tx.previous_outpoint_hash)
+
+    fetched_input_txs = await search_for_transactions(
+        transactionIds=pending_input_txs, fields="outputs"
     )
-    index: int = 0
 
+    # convert to map[tx_id][index] = {amount, address}
+    tx_map = {}
+    for tx in fetched_input_txs:
+        for output_tx in tx.get("outputs", []):
+            tx_id = output_tx.transaction_id
+            index = output_tx.index
+            address = output_tx.script_public_key_address
+            amount = output_tx.amount
+            tx_map[tx_id] = tx_map.get(tx_id, {})
+            tx_map[tx_id][index] = {
+                "amount": amount,
+                "script_public_key_address": address,
+            }
 
-class ScriptPublicKeyModel(BaseModel):
-    scriptPublicKey: str = (
-        "20c5629ce85f6618cd3ed1ac1c99dc6d3064ed244013555c51385d9efab0d0072fac"
-    )
+    # Insert amount/address back to final payload
+    for tx in txs:
+        for input_tx in tx.get("inputs", []):
+            tx_id = input_tx.previous_outpoint_hash
+            index = input_tx.previous_outpoint_index
+            target_tx_from_map = tx_map.get(tx_id, {}).get(index, {})
 
-
-class UtxoModel(BaseModel):
-    amount: str = ("11501593788",)
-    scriptPublicKey: ScriptPublicKeyModel
-    blockDaaScore: str = "18867232"
-
-
-class UtxoResponse(BaseModel):
-    address: str = "kaspa:qrzk988gtanp3nf76xkpexwud5cxfmfygqf42hz38pwea74s6qrj75jee85nj"
-    outpoint: OutpointModel
-    utxoEntry: UtxoModel
-
-
-@app.get(
-    "/addresses/{kaspaAddress}/utxos",
-    response_model=List[UtxoResponse],
-    tags=["Kaspa addresses"],
-)
-async def get_utxos_for_address(
-    kaspaAddress: str = Path(
-        description="Kaspa address as string e.g. kaspa:qqkqkzjvr7zwxxmjxjkmxxdwju9kjs6e9u82uh59z07vgaks6gg62v8707g73",
-        regex="^kaspa\:[a-z0-9]{61}$",
-    )
-):
-    """
-    Lists all open utxo for a given kaspa address
-    """
-    resp = await kaspad_client.request(
-        "getUtxosByAddressesRequest", params={"addresses": [kaspaAddress]}, timeout=120
-    )
-    try:
-        return (
-            utxo
-            for utxo in resp["getUtxosByAddressesResponse"]["entries"]
-            if utxo["address"] == kaspaAddress
-        )
-    except KeyError:
-        if (
-            "getUtxosByAddressesResponse" in resp
-            and "error" in resp["getUtxosByAddressesResponse"]
-        ):
-            raise HTTPException(
-                status_code=400, detail=resp["getUtxosByAddressesResponse"]["error"]
+            input_tx.amount = target_tx_from_map.get("amount", 0)
+            input_tx.script_public_key_address = target_tx_from_map.get(
+                "script_public_key_address"
             )
-        raise
+
+    # sort txs by block_time
+    return sorted(txs, key=lambda x: x["block_time"], reverse=True)
+
+
+async def search_for_transactions(transactionIds: List[str], fields: str = ""):
+    fields = fields.split(",") if fields else []
+
+    async with async_session() as s:
+        tx_list = await s.execute(
+            select(Transaction, Block.blue_score)
+            .join(Block, Transaction.accepting_block_hash == Block.hash)
+            .filter(Transaction.transaction_id.in_(transactionIds))
+        )
+
+        tx_list = tx_list.all()
+
+        if not fields or "inputs" in fields:
+            tx_inputs = await s.execute(
+                select(TransactionInput).filter(
+                    TransactionInput.transaction_id.in_(transactionIds)
+                )
+            )
+            tx_inputs = tx_inputs.scalars().all()
+        else:
+            tx_inputs = []
+
+        if not fields or "outputs" in fields:
+            tx_outputs = await s.execute(
+                select(TransactionOutput).filter(
+                    TransactionOutput.transaction_id.in_(transactionIds)
+                )
+            )
+            tx_outputs = tx_outputs.scalars().all()
+        else:
+            tx_outputs = []
+
+    return list(
+        (
+            filter_fields(
+                {
+                    "subnetwork_id": tx.Transaction.subnetwork_id,
+                    "transaction_id": tx.Transaction.transaction_id,
+                    "hash": tx.Transaction.hash,
+                    "mass": tx.Transaction.mass,
+                    "block_hash": tx.Transaction.block_hash,
+                    "block_time": tx.Transaction.block_time,
+                    "is_accepted": tx.Transaction.is_accepted,
+                    "accepting_block_hash": tx.Transaction.accepting_block_hash,
+                    "accepting_block_blue_score": tx.blue_score,
+                    "outputs": parse_obj_as(
+                        List[TxOutput],
+                        [
+                            x
+                            for x in tx_outputs
+                            if x.transaction_id == tx.Transaction.transaction_id
+                        ],
+                    ),
+                    "inputs": parse_obj_as(
+                        List[TxInput],
+                        [
+                            x
+                            for x in tx_inputs
+                            if x.transaction_id == tx.Transaction.transaction_id
+                        ],
+                    ),
+                },
+                fields,
+            )
+            for tx in tx_list
+        )
+    )
