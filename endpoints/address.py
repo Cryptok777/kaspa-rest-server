@@ -1,5 +1,6 @@
 # encoding: utf-8
 from typing import List
+import requests
 
 from fastapi import Path, HTTPException, Query
 from sqlalchemy import text
@@ -17,6 +18,8 @@ from endpoints import filter_fields
 from models.Block import Block
 from models.Transaction import Transaction, TransactionOutput, TransactionInput
 
+PRECISION = 1e8
+
 
 class BalanceResponse(BaseModel):
     address: str = "kaspa:pzhh76qc82wzduvsrd9xh4zde9qhp0xc8rl7qu2mvl2e42uvdqt75zrcgpm00"
@@ -26,7 +29,7 @@ class BalanceResponse(BaseModel):
 @app.get(
     "/addresses/{kaspaAddress}/balance",
     response_model=BalanceResponse,
-    tags=["Kaspa addresses"],
+    tags=["addresses"],
 )
 async def get_balance_from_kaspa_address(
     kaspaAddress: str = Path(
@@ -78,7 +81,7 @@ class TransactionForAddressResponse(BaseModel):
     "/addresses/{kaspaAddress}/transactions",
     response_model=List[TxModel],
     response_model_exclude_unset=True,
-    tags=["Kaspa addresses"],
+    tags=["addresses"],
 )
 async def get_transactions_for_address(
     kaspaAddress: str = Path(
@@ -133,6 +136,7 @@ async def get_transactions_for_address(
     pending_input_txs = []
     for tx in txs:
         for input_tx in tx.get("inputs", []):
+            print(input_tx)
             pending_input_txs.append(input_tx.previous_outpoint_hash)
 
     fetched_input_txs = await search_for_transactions(
@@ -170,6 +174,11 @@ async def get_transactions_for_address(
 
 
 async def search_for_transactions(transactionIds: List[str], fields: str = ""):
+    if True:
+        return search_for_transactions_remote(
+            transactionIds=transactionIds, fields=fields
+        )
+
     fields = fields.split(",") if fields else []
 
     async with async_session() as s:
@@ -236,3 +245,18 @@ async def search_for_transactions(transactionIds: List[str], fields: str = ""):
             for tx in tx_list
         )
     )
+
+
+def search_for_transactions_remote(transactionIds: List[str], fields: str = ""):
+    resp = requests.post(
+        "https://api.kaspa.org/transactions/search",
+        json={"transactionIds": transactionIds},
+    )
+    if resp.status_code == 200:
+        resp = resp.json()
+        for tx in resp:
+            tx["inputs"] = parse_obj_as(List[TxInput], tx["inputs"])
+            tx["outputs"] = parse_obj_as(List[TxOutput], tx["outputs"])
+        return resp
+
+    return []

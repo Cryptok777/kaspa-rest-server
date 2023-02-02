@@ -126,7 +126,7 @@ async def _get_whale_movement():
             {
                 "transaction_id": x[0],
                 "receiver": x[1],
-                "amount": x[2] / PRECISION,
+                "amount": x[2],
                 "time": x[3],
             }
         )
