@@ -10,7 +10,6 @@ from endpoints.models import (
     WhaleMovementResponse,
 )
 from server import app, kaspad_client
-from cachetools import cached, TTLCache
 from dbsession import async_session
 from sqlalchemy import text
 
@@ -21,10 +20,12 @@ from endpoints.stats import (
 )
 
 from server import app, kaspad_client
+from cache import AsyncTTL
 
+CACHE_MAX_SIZE = 10240
 PRECISION = 1e8
 MAX_SUPPLY = 2900000000000000000
-WHALE_TX_THRESHHOLD = 1.5 * 1e7 * PRECISION
+WHALE_TX_THRESHHOLD = 1 * 1e6 * PRECISION
 
 
 @app.get(
@@ -45,7 +46,7 @@ async def get_dashboard_metrics():
     return DashboardMetricsResponse(
         block_count=dag_info.get("blockCount"),
         daa_score=dag_info.get("virtualDaaScore"),
-        current_supply=current_supply,
+        current_supply=current_supply / 1e9,
         tps=1.4,
         hashrate=hashrate_info.get("hashrate"),
         mined_pct=current_supply / MAX_SUPPLY * 100,
@@ -54,7 +55,6 @@ async def get_dashboard_metrics():
     )
 
 
-@cached(cache=TTLCache(maxsize=1024, ttl=5 * 60))
 def _get_market_data_cached():
     resp = requests.get(
         "https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest",
@@ -79,6 +79,7 @@ def _get_market_data_cached():
         }
 
 
+@AsyncTTL(time_to_live=5 * 60, maxsize=CACHE_MAX_SIZE)
 @app.get(
     "/dashboard/market",
     response_model=MarketResponse,
@@ -91,8 +92,9 @@ async def get_market_data():
     return _get_market_data_cached()
 
 
+@AsyncTTL(time_to_live=5 * 60, maxsize=CACHE_MAX_SIZE)
 async def _get_whale_movement():
-    date_range = datetime.datetime.now() - datetime.timedelta(days=30)
+    date_range = datetime.datetime.now() - datetime.timedelta(days=1)
     date_range_unix = (
         time.mktime(date_range.timetuple()) * 1000 + date_range.microsecond / 1000
     )
@@ -108,10 +110,10 @@ async def _get_whale_movement():
                 ON transactions.transaction_id = transactions_outputs.transaction_id
                 WHERE
                     TRUE
-                    AND transactions.block_time > {date_range_unix}
                     AND transactions_outputs.amount > {WHALE_TX_THRESHHOLD}
-                ORDER BY transactions_outputs.amount DESC
-                LIMIT 9
+                    AND transactions.block_time > {date_range_unix}
+                ORDER BY transactions.block_time DESC
+                LIMIT 100
             """
 
     async with async_session() as session:
@@ -161,8 +163,8 @@ async def _get_active_address_graph():
     for x in resp:
         result.append(
             {
-                "date": x[0].strftime("%Y-%m-%d"),
-                "count": x[1],
+                "x": x[0].strftime("%Y-%m-%d"),
+                "y": x[1],
             }
         )
 
@@ -186,14 +188,15 @@ async def _get_tx_count_graph():
     for x in resp:
         result.append(
             {
-                "date": x[0].strftime("%Y-%m-%d"),
-                "count": x[1],
+                "x": x[0].strftime("%Y-%m-%d"),
+                "y": x[1],
             }
         )
 
     return result
 
 
+@AsyncTTL(time_to_live=5 * 60, maxsize=CACHE_MAX_SIZE)
 async def _get_dashboard_graphs():
     active_address_graph = await _get_active_address_graph()
     tx_count_graph = await _get_tx_count_graph()
@@ -207,5 +210,4 @@ async def _get_dashboard_graphs():
 )
 async def get_dashboard_graphs():
     resp = await _get_dashboard_graphs()
-    print(resp)
     return resp

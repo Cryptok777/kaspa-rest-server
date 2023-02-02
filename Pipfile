@@ -15,6 +15,7 @@ fastapi-utils = "*"
 python-socketio = "*"
 psycopg2 = {extras = ["async"], version = "*"}
 asyncpg = "*"
+async-cache = "*"
 load_dotenv = "*"
 greenlet = "*"
 cachetools = "*"
