@@ -1,5 +1,5 @@
 # encoding: utf-8
-from typing import List
+from typing import Any, List
 import requests
 
 from fastapi import Path, HTTPException, Query
@@ -99,47 +99,19 @@ async def get_transactions_for_address(
         description="The offset from which to get records", ge=0, default=0
     ),
 ):
-    """
-    Get all transactions for a given address from database
-    """
-    async with async_session() as session:
-        resp = await session.execute(
-            text(
-                f"""
-            SELECT transactions_outputs.transaction_id, transactions_outputs.index, transactions_inputs.transaction_id as inp_transaction,
-                    transactions.block_time, transactions.transaction_id
-            
-            FROM transactions
+    return await get_transactions_for_address_remote(
+        kaspaAddress=kaspaAddress, limit=limit, offset=offset
+    )
 
-			LEFT JOIN transactions_outputs ON transactions.transaction_id = transactions_outputs.transaction_id
-			LEFT JOIN transactions_inputs ON transactions_inputs.previous_outpoint_hash = transactions.transaction_id AND transactions_inputs.previous_outpoint_index::int = transactions_outputs.index
 
-            WHERE "script_public_key_address" = '{kaspaAddress}'
-			ORDER by transactions.block_time DESC
-            LIMIT {limit}
-            OFFSET {offset}
-            """
-            )
-        )
-
-        resp = resp.all()
-
-    tx_list = []
-    for x in resp:
-        tx_list.append(x[0])
-        tx_list.append(x[2])
-
-    tx_list = list(filter(lambda x: x != None, tx_list))
-    txs = await search_for_transactions(transactionIds=tx_list)
-
+async def append_input_transcations_info(txs: list[dict[str, Any]]):
     # fetch address/amount for input tx
     pending_input_txs = []
     for tx in txs:
         for input_tx in tx.get("inputs", []):
-            print(input_tx)
             pending_input_txs.append(input_tx.previous_outpoint_hash)
 
-    fetched_input_txs = await search_for_transactions(
+    fetched_input_txs = search_for_transactions_remote(
         transactionIds=pending_input_txs, fields="outputs"
     )
 
@@ -173,12 +145,66 @@ async def get_transactions_for_address(
     return sorted(txs, key=lambda x: x["block_time"], reverse=True)
 
 
-async def search_for_transactions(transactionIds: List[str], fields: str = ""):
-    if True:
-        return search_for_transactions_remote(
-            transactionIds=transactionIds, fields=fields
+async def get_transactions_for_address_local(
+    kaspaAddress: str,
+    limit: int,
+    offset: int,
+):
+    """
+    Get all transactions for a given address from database
+    """
+    async with async_session() as session:
+        resp = await session.execute(
+            text(
+                f"""
+            SELECT transactions_outputs.transaction_id, transactions_outputs.index, transactions_inputs.transaction_id as inp_transaction,
+                    transactions.block_time, transactions.transaction_id
+            
+            FROM transactions
+
+			LEFT JOIN transactions_outputs ON transactions.transaction_id = transactions_outputs.transaction_id
+			LEFT JOIN transactions_inputs ON transactions_inputs.previous_outpoint_hash = transactions.transaction_id AND transactions_inputs.previous_outpoint_index::int = transactions_outputs.index
+
+            WHERE "script_public_key_address" = '{kaspaAddress}'
+			ORDER by transactions.block_time DESC
+            LIMIT {limit}
+            OFFSET {offset}
+            """
+            )
         )
 
+        resp = resp.all()
+
+    tx_list = []
+    for x in resp:
+        tx_list.append(x[0])
+        tx_list.append(x[2])
+
+    tx_list = list(filter(lambda x: x != None, tx_list))
+    txs = await search_for_transactions(transactionIds=tx_list)
+
+    return append_input_transcations_info(txs)
+
+
+async def get_transactions_for_address_remote(
+    kaspaAddress: str,
+    limit: int,
+    offset: int,
+):
+    resp = requests.get(
+        f"https://api.kaspa.org/addresses/{kaspaAddress}/full-transactions?limit={limit}&offset={offset}",
+    )
+    if resp.status_code == 200:
+        resp = resp.json()
+        for tx in resp:
+            tx["inputs"] = parse_obj_as(List[TxInput], tx["inputs"])
+            tx["outputs"] = parse_obj_as(List[TxOutput], tx["outputs"])
+        return await append_input_transcations_info(resp)
+
+    return []
+
+
+async def search_for_transactions(transactionIds: List[str], fields: str = ""):
     fields = fields.split(",") if fields else []
 
     async with async_session() as s:
