@@ -21,17 +21,23 @@ from models.Transaction import Transaction, TransactionOutput, TransactionInput
 PRECISION = 1e8
 
 
-class BalanceResponse(BaseModel):
+class AddressInfoTag(BaseModel):
+    name: str
+    reference: str
+
+
+class AddressInfoResponse(BaseModel):
     address: str = "kaspa:pzhh76qc82wzduvsrd9xh4zde9qhp0xc8rl7qu2mvl2e42uvdqt75zrcgpm00"
     balance: int = 38240000000
+    tag: AddressInfoTag
 
 
 @app.get(
-    "/addresses/{kaspaAddress}/balance",
-    response_model=BalanceResponse,
+    "/addresses/{kaspaAddress}/info",
+    response_model=AddressInfoResponse,
     tags=["addresses"],
 )
-async def get_balance_from_kaspa_address(
+async def get_kaspa_address_info(
     kaspaAddress: str = Path(
         description="Kaspa address as string e.g. kaspa:pzhh76qc82wzduvsrd9xh4zde9qhp0xc8rl7qu2mvl2e42uvdqt75zrcgpm00",
         regex="^kaspa\:[a-z0-9]{61}$",
@@ -64,17 +70,11 @@ async def get_balance_from_kaspa_address(
     except KeyError:
         balance = 0
 
-    return {"address": kaspaAddress, "balance": balance}
-
-
-class TransactionsReceivedAndSpent(BaseModel):
-    inputs: str
-    outputs: str | None
-    timestamp: datetime
-
-
-class TransactionForAddressResponse(BaseModel):
-    transactions: List[TransactionsReceivedAndSpent]
+    return {
+        "address": kaspaAddress,
+        "balance": balance,
+        "tag": {"name": "Block explorer", "reference": "https://google.ca"},
+    }
 
 
 @app.get(
@@ -105,7 +105,8 @@ async def get_transactions_for_address(
 
 
 async def append_input_transcations_info(txs: list[dict[str, Any]]):
-    if not txs: return txs
+    if not txs:
+        return txs
 
     # fetch address/amount for input tx
     pending_input_txs = []
