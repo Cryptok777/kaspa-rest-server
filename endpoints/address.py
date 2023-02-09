@@ -181,7 +181,7 @@ async def get_transactions_for_address_local(
         tx_list.append(x[2])
 
     tx_list = list(filter(lambda x: x != None, tx_list))
-    txs = await search_for_transactions(transactionIds=tx_list)
+    txs = await search_for_transactions_local(transactionIds=tx_list)
 
     return append_input_transcations_info(txs)
 
@@ -204,7 +204,7 @@ async def get_transactions_for_address_remote(
     return []
 
 
-async def search_for_transactions(transactionIds: List[str], fields: str = ""):
+async def search_for_transactions_local(transactionIds: List[str], fields: str = ""):
     fields = fields.split(",") if fields else []
 
     async with async_session() as s:

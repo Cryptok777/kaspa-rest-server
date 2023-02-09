@@ -92,28 +92,14 @@ async def get_market_data():
     return _get_market_data_cached()
 
 
-@AsyncTTL(time_to_live=5 * 60, maxsize=CACHE_MAX_SIZE)
 async def _get_whale_movement():
-    date_range = datetime.datetime.now() - datetime.timedelta(days=1)
-    date_range_unix = (
-        time.mktime(date_range.timetuple()) * 1000 + date_range.microsecond / 1000
-    )
-
     sql = f"""
                 SELECT
-                    transactions_outputs.transaction_id
-                    ,transactions_outputs.script_public_key_address
-                    ,transactions_outputs.amount
-                    ,transactions.block_time
-                FROM transactions_outputs
-                LEFT JOIN transactions
-                ON transactions.transaction_id = transactions_outputs.transaction_id
-                WHERE
-                    TRUE
-                    AND transactions_outputs.amount > {WHALE_TX_THRESHHOLD}
-                    AND transactions.block_time > {date_range_unix}
-                ORDER BY transactions.block_time DESC
-                LIMIT 100
+                    transaction_id
+                    ,script_public_key_address
+                    ,amount
+                    ,block_time
+                FROM agg_whale_movements
             """
 
     async with async_session() as session:
@@ -146,13 +132,9 @@ async def get_whale_movement():
 async def _get_active_address_graph():
     sql = f"""
                 SELECT  
-                    DATE_TRUNC('day',TO_TIMESTAMP(transactions.block_time/ 1e3)) as date
-                    ,COUNT(DISTINCT(transactions_outputs.script_public_key_address))
-                FROM transactions_outputs
-                LEFT JOIN transactions
-                ON transactions.transaction_id = transactions_outputs.transaction_id
-                GROUP BY  DATE_TRUNC('day',TO_TIMESTAMP(transactions.block_time / 1e3))
-                ORDER BY date
+                    date
+                    ,count
+                FROM agg_active_addresses
             """
 
     async with async_session() as session:
@@ -173,11 +155,10 @@ async def _get_active_address_graph():
 
 async def _get_tx_count_graph():
     sql = f"""
-                SELECT  DATE_TRUNC('day',TO_TIMESTAMP(transactions.block_time/ 1e3)) AS date
-                    ,COUNT(*)
-                FROM transactions
-                GROUP BY  DATE_TRUNC('day',TO_TIMESTAMP(transactions.block_time / 1e3))
-                ORDER BY date
+                SELECT  
+                    date
+                    ,count
+                FROM agg_transactions_count
             """
 
     async with async_session() as session:
@@ -196,7 +177,6 @@ async def _get_tx_count_graph():
     return result
 
 
-@AsyncTTL(time_to_live=5 * 60, maxsize=CACHE_MAX_SIZE)
 async def _get_dashboard_graphs():
     active_address_graph = await _get_active_address_graph()
     tx_count_graph = await _get_tx_count_graph()
