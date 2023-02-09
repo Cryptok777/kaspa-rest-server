@@ -6,6 +6,7 @@ from pydantic import parse_obj_as
 from sqlalchemy.future import select
 
 from dbsession import async_session
+from endpoints.address import append_input_transcations_info
 from endpoints.models import TxInput, TxModel, TxOutput
 from models.Block import Block
 from models.Transaction import Transaction, TransactionOutput, TransactionInput
@@ -56,7 +57,7 @@ async def get_transaction(
             tx_inputs = tx_inputs.scalars().all()
 
     if tx:
-        return {
+        tx = {
             "subnetwork_id": tx.Transaction.subnetwork_id,
             "transaction_id": tx.Transaction.transaction_id,
             "hash": tx.Transaction.hash,
@@ -69,5 +70,6 @@ async def get_transaction(
             "outputs": parse_obj_as(List[TxOutput], tx_outputs) if tx_outputs else None,
             "inputs": parse_obj_as(List[TxInput], tx_inputs) if tx_inputs else None,
         }
+        return (await append_input_transcations_info([tx]))[0]
     else:
         raise HTTPException(status_code=404, detail="Transaction not found")

@@ -105,6 +105,8 @@ async def get_transactions_for_address(
 
 
 async def append_input_transcations_info(txs: list[dict[str, Any]]):
+    if not txs: return txs
+
     # fetch address/amount for input tx
     pending_input_txs = []
     for tx in txs:
@@ -183,7 +185,7 @@ async def get_transactions_for_address_local(
     tx_list = list(filter(lambda x: x != None, tx_list))
     txs = await search_for_transactions_local(transactionIds=tx_list)
 
-    return append_input_transcations_info(txs)
+    return await append_input_transcations_info(txs)
 
 
 async def get_transactions_for_address_remote(
@@ -281,7 +283,7 @@ def search_for_transactions_remote(transactionIds: List[str], fields: str = ""):
     if resp.status_code == 200:
         resp = resp.json()
         for tx in resp:
-            tx["inputs"] = parse_obj_as(List[TxInput], tx["inputs"])
+            tx["inputs"] = parse_obj_as(List[TxInput], tx["inputs"] or [])
             tx["outputs"] = parse_obj_as(List[TxOutput], tx["outputs"])
         return resp
 
