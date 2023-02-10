@@ -73,7 +73,7 @@ async def get_kaspa_address_info(
     return {
         "address": kaspaAddress,
         "balance": balance,
-        "tag": {"name": "Block explorer", "reference": "https://google.ca"},
+        "tag": {"name": "Block explorer community funding pool", "reference": "https://google.ca"},
     }
 
 

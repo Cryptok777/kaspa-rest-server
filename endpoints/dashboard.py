@@ -28,6 +28,21 @@ MAX_SUPPLY = 2900000000000000000
 WHALE_TX_THRESHHOLD = 1 * 1e6 * PRECISION
 
 
+async def _get_tps():
+    sql = f"""
+                SELECT
+                    count
+                FROM agg_tps
+            """
+
+    async with async_session() as session:
+        resp = await session.execute(text(sql))
+        resp = resp.all()
+
+    if len(resp) == 0 or len(resp[0]) == 0: return 0
+
+    return resp[0][0] / 60
+
 @app.get(
     "/dashboard/metrics",
     response_model=DashboardMetricsResponse,
@@ -42,15 +57,16 @@ async def get_dashboard_metrics():
     halving_info = get_halving(dag_info)
     hashrate_info = get_hashrate(dag_info)
     current_supply = int(coin_supply_info.get("circulatingSupply", 0))
+    tps = await _get_tps()
 
     return DashboardMetricsResponse(
         block_count=dag_info.get("blockCount"),
         daa_score=dag_info.get("virtualDaaScore"),
         current_supply=current_supply / 1e9,
-        tps=1.4,
+        tps=tps,
         hashrate=hashrate_info.get("hashrate"),
         mined_pct=current_supply / MAX_SUPPLY * 100,
-        next_halving_timestamp=halving_info.get("nextHalvingTimestamp"),
+        next_halving_timestamp=halving_info.get("nextHalvingTimestamp") * 1e3,
         next_halving_reward=halving_info.get("nextHalvingAmount"),
     )
 
