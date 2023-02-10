@@ -113,6 +113,11 @@ class GraphsResponse(BaseModel):
     tx_count: List[GraphResponse]
 
 
+class SearchResponse(BaseModel):
+    result_type: str
+    value: str
+
+
 class TxInput(BaseModel):
     transaction_id: str
     index: int

@@ -1,14 +1,17 @@
 # encoding: utf-8
+from typing import List
 import os
 import requests
 
-import datetime, time
+from endpoints.block import get_block
 from endpoints.models import (
     DashboardMetricsResponse,
     GraphsResponse,
     MarketResponse,
+    SearchResponse,
     WhaleMovementResponse,
 )
+from endpoints.transcation import get_transaction
 from server import app, kaspad_client
 from dbsession import async_session
 from sqlalchemy import text
@@ -27,6 +30,9 @@ PRECISION = 1e8
 MAX_SUPPLY = 2900000000000000000
 WHALE_TX_THRESHHOLD = 1 * 1e6 * PRECISION
 
+KASPA_ADDRESS_LENGTH = 67
+KASPA_HASH_LENGTH = 64
+
 
 async def _get_tps():
     sql = f"""
@@ -39,9 +45,11 @@ async def _get_tps():
         resp = await session.execute(text(sql))
         resp = resp.all()
 
-    if len(resp) == 0 or len(resp[0]) == 0: return 0
+    if len(resp) == 0 or len(resp[0]) == 0:
+        return 0
 
     return resp[0][0] / 60
+
 
 @app.get(
     "/dashboard/metrics",
@@ -207,3 +215,33 @@ async def _get_dashboard_graphs():
 async def get_dashboard_graphs():
     resp = await _get_dashboard_graphs()
     return resp
+
+
+@app.get(
+    "/dashboard/search",
+    response_model=SearchResponse,
+    tags=["dashboard"],
+)
+async def get_search_result(query: str):
+    query = query.strip().lower()
+
+    if query.startswith("kaspa:") and len(query) == KASPA_ADDRESS_LENGTH:
+        return {"result_type": "address", "value": query}
+
+    try:
+        if len(query) != KASPA_HASH_LENGTH:
+            raise Exception()
+        await get_block(blockId=query)
+        return {"result_type": "block", "value": query}
+    except:
+        pass
+
+    try:
+        if len(query) != KASPA_HASH_LENGTH:
+            raise Exception()
+        await get_transaction(transactionId=query, inputs=False, outputs=False)
+        return {"result_type": "transcation", "value": query}
+    except:
+        pass
+
+    return {}
