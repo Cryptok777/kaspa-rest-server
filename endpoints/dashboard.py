@@ -244,4 +244,4 @@ async def get_search_result(query: str):
     except:
         pass
 
-    return {}
+    return {"result_type": "", "value": query}
