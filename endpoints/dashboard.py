@@ -159,6 +159,7 @@ async def _get_active_address_graph():
                     date
                     ,count
                 FROM agg_active_addresses
+                WHERE date > current_date - interval '90' day;
             """
 
     async with async_session() as session:
@@ -183,6 +184,7 @@ async def _get_tx_count_graph():
                     date
                     ,count
                 FROM agg_transactions_count
+                WHERE date > current_date - interval '90' day;
             """
 
     async with async_session() as session:

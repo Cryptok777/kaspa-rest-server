@@ -130,4 +130,5 @@ dmypy.json
 # Pyre type checker
 .pyre/
 .env.prod
+.env.local
 .vscode/

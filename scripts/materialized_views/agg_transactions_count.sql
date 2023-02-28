@@ -1,24 +1,30 @@
-CREATE MATERIALIZED VIEW agg_transactions_count AS (
-  SELECT 
-    DATE_TRUNC(
-      'day', 
-      TO_TIMESTAMP(transactions.block_time / 1e3)
-    ) AS date, 
-    COUNT(*) 
-  FROM 
-    transactions 
-  GROUP BY 
-    DATE_TRUNC(
-      'day', 
-      TO_TIMESTAMP(transactions.block_time / 1e3)
-    ) 
-  ORDER BY 
-    date
-) WITH NO DATA;
-
-REFRESH MATERIALIZED VIEW agg_transactions_count;
-
 SELECT 
   cron.schedule(
-    '*/30 * * * *', $$REFRESH MATERIALIZED VIEW agg_transactions_count$$
-  );
+    '0 * * * *', 
+    $$(
+      INSERT INTO agg_transactions_count (date, count) 
+      SELECT 
+        DATE_TRUNC(
+          'day', 
+          TO_TIMESTAMP(block_time / 1e3)
+        ) AS date, 
+        COUNT(
+          DISTINCT(transaction_id)
+        ) AS count 
+      FROM 
+        tx_id_address_mapping 
+      WHERE 
+        DATE_TRUNC(
+          'day', 
+          TO_TIMESTAMP(block_time / 1e3)
+        ) :: date = now() :: date 
+      GROUP BY 
+        DATE_TRUNC(
+          'day', 
+          TO_TIMESTAMP(block_time / 1e3)
+        ) ON CONFLICT (date) DO 
+      UPDATE 
+      SET 
+        count = EXCLUDED.count;
+) $$
+);
