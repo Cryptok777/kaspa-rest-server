@@ -181,7 +181,9 @@ async def get_block_transactions(blockId):
                         ][int(tx_inp.previous_outpoint_index)].amount,
                         "script_public_key_address": previous_outpoint_txn_map[
                             tx_inp.previous_outpoint_hash
-                        ][int(tx_inp.previous_outpoint_index)].script_public_key_address,
+                        ][
+                            int(tx_inp.previous_outpoint_index)
+                        ].script_public_key_address,
                     }
                     for tx_inp in tx_inputs
                     if tx_inp.transaction_id == tx.transaction_id
