@@ -3,6 +3,7 @@ from typing import List
 import os
 import requests
 
+from fastapi import Response
 from endpoints.block import get_block
 from endpoints.models import (
     DashboardMetricsResponse,
@@ -227,13 +228,13 @@ async def get_dashboard_graphs():
 async def get_search_result(query: str):
     query = query.strip().lower()
 
-    if query.startswith("kaspa:") and len(query) == KASPA_ADDRESS_LENGTH:
+    if query.startswith("kaspa:"):
         return {"result_type": "address", "value": query}
 
     try:
         if len(query) != KASPA_HASH_LENGTH:
             raise Exception()
-        await get_block(blockId=query)
+        await get_block(response=Response(),blockId=query)
         return {"result_type": "block", "value": query}
     except:
         pass
