@@ -3,12 +3,12 @@ from typing import Any, List
 import requests
 
 from fastapi import Path, HTTPException, Query
-from sqlalchemy import text
 
 from dbsession import async_session
 from endpoints.models import TxInput, TxModel, TxOutput
+from models.AddressTag import AddressTag
+from models.TxAddrMapping import TxAddrMapping
 from server import app, kaspad_client
-from datetime import datetime
 
 from pydantic import BaseModel, parse_obj_as
 from sqlalchemy.future import select
@@ -17,19 +17,32 @@ from dbsession import async_session
 from endpoints import filter_fields
 from models.Block import Block
 from models.Transaction import Transaction, TransactionOutput, TransactionInput
+from sqlalchemy import func
 
 PRECISION = 1e8
 
 
 class AddressInfoTag(BaseModel):
     name: str
-    reference: str
+    link: str | None
 
 
 class AddressInfoResponse(BaseModel):
     address: str = "kaspa:pzhh76qc82wzduvsrd9xh4zde9qhp0xc8rl7qu2mvl2e42uvdqt75zrcgpm00"
     balance: int = 38240000000
-    tag: AddressInfoTag
+    transaction_count: int
+    tags: List[AddressInfoTag]
+
+
+async def get_address_tags(address: str):
+    async with async_session() as s:
+        tags = await s.execute(
+            select(AddressTag.name, AddressTag.link).filter(
+                AddressTag.address == address
+            )
+        )
+
+    return [{"name": tag[0], "link": tag[1]} for tag in tags.all()]
 
 
 @app.get(
@@ -70,10 +83,14 @@ async def get_kaspa_address_info(
     except KeyError:
         balance = 0
 
+    tags = await get_address_tags(address=kaspaAddress)
+    transaction_count = await get_transaction_count_for_address(address=kaspaAddress)
+
     return {
         "address": kaspaAddress,
         "balance": balance,
-        "tag": {"name": "Block explorer community funding pool", "reference": "https://google.ca"},
+        "transaction_count": transaction_count,
+        "tags": tags,
     }
 
 
@@ -104,50 +121,6 @@ async def get_transactions_for_address(
     )
 
 
-async def append_input_transcations_info(txs: list[dict[str, Any]]):
-    if not txs:
-        return txs
-
-    # fetch address/amount for input tx
-    pending_input_txs = []
-    for tx in txs:
-        for input_tx in tx.get("inputs", []):
-            pending_input_txs.append(input_tx.previous_outpoint_hash)
-
-    fetched_input_txs = search_for_transactions_remote(
-        transactionIds=pending_input_txs, fields="outputs"
-    )
-
-    # convert to map[tx_id][index] = {amount, address}
-    tx_map = {}
-    for tx in fetched_input_txs:
-        for output_tx in tx.get("outputs", []):
-            tx_id = output_tx.transaction_id
-            index = output_tx.index
-            address = output_tx.script_public_key_address
-            amount = output_tx.amount
-            tx_map[tx_id] = tx_map.get(tx_id, {})
-            tx_map[tx_id][index] = {
-                "amount": amount,
-                "script_public_key_address": address,
-            }
-
-    # Insert amount/address back to final payload
-    for tx in txs:
-        for input_tx in tx.get("inputs", []):
-            tx_id = input_tx.previous_outpoint_hash
-            index = input_tx.previous_outpoint_index
-            target_tx_from_map = tx_map.get(tx_id, {}).get(index, {})
-
-            input_tx.amount = target_tx_from_map.get("amount", 0)
-            input_tx.script_public_key_address = target_tx_from_map.get(
-                "script_public_key_address"
-            )
-
-    # sort txs by block_time
-    return sorted(txs, key=lambda x: x["block_time"], reverse=True)
-
-
 async def get_transactions_for_address_local(
     kaspaAddress: str,
     limit: int,
@@ -156,55 +129,20 @@ async def get_transactions_for_address_local(
     """
     Get all transactions for a given address from database
     """
-    async with async_session() as session:
-        resp = await session.execute(
-            text(
-                f"""
-            SELECT transactions_outputs.transaction_id, transactions_outputs.index, transactions_inputs.transaction_id as inp_transaction,
-                    transactions.block_time, transactions.transaction_id
-            
-            FROM transactions
-
-			LEFT JOIN transactions_outputs ON transactions.transaction_id = transactions_outputs.transaction_id
-			LEFT JOIN transactions_inputs ON transactions_inputs.previous_outpoint_hash = transactions.transaction_id AND transactions_inputs.previous_outpoint_index::int = transactions_outputs.index
-
-            WHERE "script_public_key_address" = '{kaspaAddress}'
-			ORDER by transactions.block_time DESC
-            LIMIT {limit}
-            OFFSET {offset}
-            """
-            )
+    async with async_session() as s:
+        # Doing it this way as opposed to adding it directly in the IN clause
+        # so I can re-use the same result in tx_list, TxInput and TxOutput
+        tx_within_limit_offset = await s.execute(
+            select(TxAddrMapping.transaction_id)
+            .filter(TxAddrMapping.address == kaspaAddress)
+            .limit(limit)
+            .offset(offset)
+            .order_by(TxAddrMapping.block_time.desc())
         )
 
-        resp = resp.all()
+        tx_ids_in_page = [x[0] for x in tx_within_limit_offset.all()]
 
-    tx_list = []
-    for x in resp:
-        tx_list.append(x[0])
-        tx_list.append(x[2])
-
-    tx_list = list(filter(lambda x: x != None, tx_list))
-    txs = await search_for_transactions_local(transactionIds=tx_list)
-
-    return await append_input_transcations_info(txs)
-
-
-async def get_transactions_for_address_remote(
-    kaspaAddress: str,
-    limit: int,
-    offset: int,
-):
-    resp = requests.get(
-        f"https://api.kaspa.org/addresses/{kaspaAddress}/full-transactions?limit={limit}&offset={offset}",
-    )
-    if resp.status_code == 200:
-        resp = resp.json()
-        for tx in resp:
-            tx["inputs"] = parse_obj_as(List[TxInput], tx["inputs"])
-            tx["outputs"] = parse_obj_as(List[TxOutput], tx["outputs"])
-        return await append_input_transcations_info(resp)
-
-    return []
+    return await search_for_transactions_local(transactionIds=tx_ids_in_page)
 
 
 async def search_for_transactions_local(transactionIds: List[str], fields: str = ""):
@@ -274,6 +212,80 @@ async def search_for_transactions_local(transactionIds: List[str], fields: str =
             for tx in tx_list
         )
     )
+
+
+async def get_transaction_count_for_address(address: str):
+    """
+    Count the number of transactions associated with this address
+    """
+
+    async with async_session() as s:
+        count_query = select(func.count()).filter(TxAddrMapping.address == address)
+        tx_count = await s.execute(count_query)
+
+    return tx_count.scalar()
+
+
+async def append_input_transcations_info(txs: list[dict[str, Any]]):
+    if not txs:
+        return txs
+
+    # fetch address/amount for input tx
+    pending_input_txs = []
+    for tx in txs:
+        for input_tx in tx.get("inputs", []):
+            pending_input_txs.append(input_tx.previous_outpoint_hash)
+
+    fetched_input_txs = search_for_transactions_remote(
+        transactionIds=pending_input_txs, fields="outputs"
+    )
+
+    # convert to map[tx_id][index] = {amount, address}
+    tx_map = {}
+    for tx in fetched_input_txs:
+        for output_tx in tx.get("outputs", []):
+            tx_id = output_tx.transaction_id
+            index = output_tx.index
+            address = output_tx.script_public_key_address
+            amount = output_tx.amount
+            tx_map[tx_id] = tx_map.get(tx_id, {})
+            tx_map[tx_id][index] = {
+                "amount": amount,
+                "script_public_key_address": address,
+            }
+
+    # Insert amount/address back to final payload
+    for tx in txs:
+        for input_tx in tx.get("inputs", []):
+            tx_id = input_tx.previous_outpoint_hash
+            index = input_tx.previous_outpoint_index
+            target_tx_from_map = tx_map.get(tx_id, {}).get(index, {})
+
+            input_tx.amount = target_tx_from_map.get("amount", 0)
+            input_tx.script_public_key_address = target_tx_from_map.get(
+                "script_public_key_address"
+            )
+
+    # sort txs by block_time
+    return sorted(txs, key=lambda x: x["block_time"], reverse=True)
+
+
+async def get_transactions_for_address_remote(
+    kaspaAddress: str,
+    limit: int,
+    offset: int,
+):
+    resp = requests.get(
+        f"https://api.kaspa.org/addresses/{kaspaAddress}/full-transactions?limit={limit}&offset={offset}",
+    )
+    if resp.status_code == 200:
+        resp = resp.json()
+        for tx in resp:
+            tx["inputs"] = parse_obj_as(List[TxInput], tx["inputs"])
+            tx["outputs"] = parse_obj_as(List[TxOutput], tx["outputs"])
+        return await append_input_transcations_info(resp)
+
+    return []
 
 
 def search_for_transactions_remote(transactionIds: List[str], fields: str = ""):

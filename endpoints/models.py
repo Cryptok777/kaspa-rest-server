@@ -164,24 +164,24 @@ class TxModel(BaseModel):
 class VerboseDataModel(BaseModel):
     hash: str = "18c7afdf8f447ca06adb8b4946dc45f5feb1188c7d177da6094dfbc760eca699"
     difficulty: float = (4102204523252.94,)
-    selectedParentHash: str = (
+    selected_parent_hash: str = (
         "580f65c8da9d436480817f6bd7c13eecd9223b37f0d34ae42fb17e1e9fda397e"
     )
-    transactionIds: List[str] = [
+    transaction_ids: list[str] = [
         "533f8314bf772259fe517f53507a79ebe61c8c6a11748d93a0835551233b3311"
     ]
-    blueScore: str = "18483232"
-    childrenHashes: List[str] = [
+    blue_score: str = "18483232"
+    children_hashes: list[str] = [
         "2fda0dad4ec879b4ad02ebb68c757955cab305558998129a7de111ab852e7dcb",
         "9a822351cd293a653f6721afec1646bd1690da7124b5fbe87001711406010604",
     ]
-    mergeSetBluesHashes: List[str] = [
+    merge_set_blues_hashes: list[str] = [
         "580f65c8da9d436480817f6bd7c13eecd9223b37f0d34ae42fb17e1e9fda397e"
     ]
-    mergeSetRedsHashes: List[str] = [
+    merge_set_reds_hashes: list[str] = [
         "580f65c8da9d436480817f6bd7c13eecd9223b37f0d34ae42fb17e1e9fda397e"
     ]
-    isChainBlock: bool = False
+    is_chain_block: bool = False
 
 
 class ParentHashModel(BaseModel):
@@ -212,18 +212,18 @@ class BlockHeader(BaseModel):
         "5d32a9403273a34b6551b84340a1459ddde2ae6ba59a47987a6374340ba41d5d"
     )
 
+class BlockTranscationModel(BaseModel):
+    inputs: None
+    outputs: None
+    subnetworkId:  None
+    verboseData: None
 
 class BlockModel(BaseModel):
     header: BlockHeader
-    transactions: list | None
-    verboseData: VerboseDataModel
+    transactions: List[TxModel] | None
+    verbose_data: VerboseDataModel
 
 
 class BlockResponse(BaseModel):
-    blockHashes: List[str] = [
-        "44edf9bfd32aa154bfad64485882f184372b64bd60565ba121b42fc3cb1238f3",
-        "18c7afdf8f447ca06adb8b4946dc45f5feb1188c7d177da6094dfbc760eca699",
-        "9a822351cd293a653f6721afec1646bd1690da7124b5fbe87001711406010604",
-        "2fda0dad4ec879b4ad02ebb68c757955cab305558998129a7de111ab852e7dcb",
-    ]
+    blockHashes: List[str] = []
     blocks: List[BlockModel] | None
