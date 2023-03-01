@@ -8,6 +8,7 @@ from sqlalchemy import select
 
 from dbsession import async_session
 from endpoints.models import BlockModel, BlockResponse
+from endpoints.utils import camel_to_snake_case_deep, kaspadBlockToModel
 from models.Block import Block
 from models.Transaction import Transaction, TransactionOutput, TransactionInput
 from server import app, kaspad_client
@@ -24,9 +25,10 @@ async def get_block(response: Response, blockId: str = Path(regex="[a-f0-9]{64}"
     )
     requested_block = None
 
-    if False:
+    if "block" in resp["getBlockResponse"]:
         # We found the block in kaspad. Just use it
-        requested_block = resp["getBlockResponse"]["block"]
+        requested_block = kaspadBlockToModel(resp["getBlockResponse"]["block"])
+        response.headers["X-Data-Source"] = "Kaspad"
     else:
         # Didn't find the block in kaspad. Try getting it from the DB
         response.headers["X-Data-Source"] = "Database"
@@ -206,6 +208,7 @@ async def get_block_transactions(blockId):
                 "mass": tx.mass,
                 "block_hash": tx.block_hash,
                 "block_time": tx.block_time,
+                "is_accepted": tx.is_accepted,
             }
         )
 

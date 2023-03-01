@@ -115,16 +115,15 @@ async def get_transactions_for_address(
     offset: int = Query(
         description="The offset from which to get records", ge=0, default=0
     ),
+    fields: str = "",
 ):
-    return await get_transactions_for_address_remote(
-        kaspaAddress=kaspaAddress, limit=limit, offset=offset
+    return await get_transactions_for_address_local(
+        kaspaAddress=kaspaAddress, limit=limit, offset=offset, fields=fields
     )
 
 
 async def get_transactions_for_address_local(
-    kaspaAddress: str,
-    limit: int,
-    offset: int,
+    kaspaAddress: str, limit: int, offset: int, fields: str = ""
 ):
     """
     Get all transactions for a given address from database
@@ -142,7 +141,9 @@ async def get_transactions_for_address_local(
 
         tx_ids_in_page = [x[0] for x in tx_within_limit_offset.all()]
 
-    return await search_for_transactions_local(transactionIds=tx_ids_in_page)
+    return await search_for_transactions_local(
+        transactionIds=tx_ids_in_page, fields=fields
+    )
 
 
 async def search_for_transactions_local(transactionIds: List[str], fields: str = ""):
@@ -153,6 +154,7 @@ async def search_for_transactions_local(transactionIds: List[str], fields: str =
             select(Transaction, Block.blue_score)
             .join(Block, Transaction.accepting_block_hash == Block.hash)
             .filter(Transaction.transaction_id.in_(transactionIds))
+            .order_by(Transaction.block_time.desc())
         )
 
         tx_list = tx_list.all()
@@ -164,6 +166,22 @@ async def search_for_transactions_local(transactionIds: List[str], fields: str =
                 )
             )
             tx_inputs = tx_inputs.scalars().all()
+
+            # Fetch input txns
+            previous_outpoint_txns = await s.execute(
+                select(TransactionOutput).where(
+                    TransactionOutput.transaction_id.in_(
+                        [tx_inp.previous_outpoint_hash for tx_inp in tx_inputs]
+                    )
+                )
+            )
+
+            previous_outpoint_txns = previous_outpoint_txns.scalars().all()
+            previous_outpoint_txn_map = {}
+            for tx in previous_outpoint_txns:
+                if tx.transaction_id not in previous_outpoint_txn_map:
+                    previous_outpoint_txn_map[tx.transaction_id] = {}
+                previous_outpoint_txn_map[tx.transaction_id][tx.index] = tx
         else:
             tx_inputs = []
 
@@ -201,7 +219,15 @@ async def search_for_transactions_local(transactionIds: List[str], fields: str =
                     "inputs": parse_obj_as(
                         List[TxInput],
                         [
-                            x
+                            {
+                                **x.__dict__,
+                                "amount": previous_outpoint_txn_map[
+                                    x.previous_outpoint_hash
+                                ][int(x.previous_outpoint_index)].amount,
+                                "script_public_key_address": previous_outpoint_txn_map[
+                                    x.previous_outpoint_hash
+                                ][int(x.previous_outpoint_index)].script_public_key_address,
+                            }
                             for x in tx_inputs
                             if x.transaction_id == tx.Transaction.transaction_id
                         ],
