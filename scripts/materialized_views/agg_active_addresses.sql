@@ -1,7 +1,7 @@
 SELECT 
   cron.schedule(
     '0 * * * *', 
-    $$(
+    $$
       INSERT INTO agg_active_addresses (date, count) 
       SELECT 
         DATE_TRUNC(
@@ -26,5 +26,5 @@ SELECT
       UPDATE 
       SET 
         count = EXCLUDED.count;
-) $$
+    $$
 );

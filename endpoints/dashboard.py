@@ -2,6 +2,7 @@
 from typing import List
 import os
 import requests
+import httpx
 
 from fastapi import Response
 from endpoints.block import get_block
@@ -35,6 +36,7 @@ KASPA_ADDRESS_LENGTH = 67
 KASPA_HASH_LENGTH = 64
 
 
+@AsyncTTL(time_to_live=1 * 60, maxsize=CACHE_MAX_SIZE)
 async def _get_tps():
     sql = f"""
                 SELECT
@@ -80,15 +82,18 @@ async def get_dashboard_metrics():
     )
 
 
-def _get_market_data_cached():
-    resp = requests.get(
-        "https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest",
-        params={"slug": "kaspa"},
-        headers={
-            "Accepts": "application/json",
-            "X-CMC_PRO_API_KEY": os.environ["COINMARKETCAP_API_KEY"],
-        },
-    )
+@AsyncTTL(time_to_live=5 * 60, maxsize=CACHE_MAX_SIZE)
+async def _get_market_data():
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            "https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest",
+            params={"slug": "kaspa"},
+            headers={
+                "Accepts": "application/json",
+                "X-CMC_PRO_API_KEY": os.environ["COINMARKETCAP_API_KEY"],
+            },
+        )
+
     if resp.status_code == 200 and resp.json().get("status", {}).get("error_code") == 0:
         resp = resp.json().get("data")
         first_key = list(resp.keys())[0]
@@ -104,7 +109,6 @@ def _get_market_data_cached():
         }
 
 
-@AsyncTTL(time_to_live=5 * 60, maxsize=CACHE_MAX_SIZE)
 @app.get(
     "/dashboard/market",
     response_model=MarketResponse,
@@ -114,9 +118,10 @@ async def get_market_data():
     """
     Get $KAS price and marke data
     """
-    return _get_market_data_cached()
+    return await _get_market_data()
 
 
+@AsyncTTL(time_to_live=5 * 60, maxsize=CACHE_MAX_SIZE)
 async def _get_whale_movement():
     sql = f"""
                 SELECT
@@ -160,7 +165,8 @@ async def _get_active_address_graph():
                     date
                     ,count
                 FROM agg_active_addresses
-                WHERE date > current_date - interval '90' day;
+                WHERE date > current_date - interval '90' day
+                ORDER BY date ASC;
             """
 
     async with async_session() as session:
@@ -185,7 +191,8 @@ async def _get_tx_count_graph():
                     date
                     ,count
                 FROM agg_transactions_count
-                WHERE date > current_date - interval '90' day;
+                WHERE date > current_date - interval '90' day
+                ORDER BY date ASC;
             """
 
     async with async_session() as session:
@@ -204,6 +211,7 @@ async def _get_tx_count_graph():
     return result
 
 
+@AsyncTTL(time_to_live=60 * 60, maxsize=CACHE_MAX_SIZE)
 async def _get_dashboard_graphs():
     active_address_graph = await _get_active_address_graph()
     tx_count_graph = await _get_tx_count_graph()
@@ -234,7 +242,7 @@ async def get_search_result(query: str):
     try:
         if len(query) != KASPA_HASH_LENGTH:
             raise Exception()
-        await get_block(response=Response(),blockId=query)
+        await get_block(response=Response(), blockId=query)
         return {"result_type": "block", "value": query}
     except:
         pass

@@ -19,6 +19,7 @@ async-cache = "*"
 load_dotenv = "*"
 greenlet = "*"
 cachetools = "*"
+httpx = "*"
 
 [dev-packages]
 black = "*"
