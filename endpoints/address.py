@@ -152,7 +152,7 @@ async def search_for_transactions_local(transactionIds: List[str], fields: str =
     async with async_session() as s:
         tx_list = await s.execute(
             select(Transaction, Block.blue_score)
-            .join(Block, Transaction.accepting_block_hash == Block.hash)
+            .join(Block, Transaction.accepting_block_hash == Block.hash, isouter=True)
             .filter(Transaction.transaction_id.in_(transactionIds))
             .order_by(Transaction.block_time.desc())
         )
