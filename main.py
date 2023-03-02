@@ -11,7 +11,8 @@ from starlette.responses import RedirectResponse
 
 from server import app, kaspad_client
 from sockets import blocks
-
+from redis.backoff import ExponentialBackoff
+from redis.retry import Retry
 
 BLOCKS_TASK = None  # type: Task
 
@@ -24,9 +25,11 @@ async def startup():
     BLOCKS_TASK = asyncio.create_task(blocks.config())
 
     # Load redis
+    retry = Retry(ExponentialBackoff(), 3)
     redis_client = redis.from_url(
         os.environ.get("REDIS_URL")
-        + "?decode_responses=True&encoding=utf-8&ssl_cert_reqs=none"
+        + "?decode_responses=True&encoding=utf-8&ssl_cert_reqs=none",
+        retry=retry,
     )
     await FastAPILimiter.init(redis_client)
 
