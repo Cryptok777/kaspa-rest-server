@@ -104,7 +104,7 @@ async def get_kaspa_address_info(
     response_model=TranscationsResponse,
     response_model_exclude_unset=True,
     tags=["addresses"],
-    dependencies=[Depends(RateLimiter(times=5, seconds=10))]
+    dependencies=[Depends(RateLimiter(times=5, seconds=10))],
 )
 async def get_transactions_for_address(
     kaspaAddress: str = Path(
@@ -240,6 +240,9 @@ async def search_for_transactions_local(transactionIds: List[str], fields: str =
                             }
                             for x in tx_inputs
                             if x.transaction_id == tx.Transaction.transaction_id
+                            and previous_outpoint_txn_map.get(
+                                x.previous_outpoint_hash, {}
+                            ).get(int(x.previous_outpoint_index))
                         ],
                     ),
                 },
