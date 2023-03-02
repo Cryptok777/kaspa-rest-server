@@ -25,7 +25,7 @@ from sqlalchemy import func
 from cache import AsyncTTL
 
 
-@AsyncTTL(time_to_live=10 * 60, maxsize=CACHE_MAX_SIZE)
+@AsyncTTL(time_to_live=60 * 60, maxsize=CACHE_MAX_SIZE)
 async def get_total_holders():
     async with async_session() as s:
         count_query = select(func.count()).filter(AddressBalance.balance > 0)
