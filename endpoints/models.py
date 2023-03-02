@@ -3,6 +3,18 @@ from typing import List
 from pydantic import BaseModel
 
 
+class AddressInfoTag(BaseModel):
+    address: str | None
+    name: str
+    link: str | None
+
+
+class AddressInfoResponse(BaseModel):
+    address: str
+    balance: int
+    tags: List[AddressInfoTag]
+
+
 class BlockdagResponse(BaseModel):
     networkName: str
     blockCount: str
@@ -210,3 +222,21 @@ class BlockModel(BaseModel):
 class BlockResponse(BaseModel):
     blockHashes: List[str] = []
     blocks: List[BlockModel] | None
+
+
+class HoldersOverviewResponse(BaseModel):
+    holders_count: int
+    top_10_holder: float
+    top_50_holder: float
+    top_100_holder: float
+
+
+class HolderModel(BaseModel):
+    address: str
+    balance: int
+    percentage: float
+    tags: List[AddressInfoTag] | None
+
+
+class HoldersListResponse(BaseModel):
+    holders: List[HolderModel]

@@ -14,6 +14,7 @@ from endpoints.models import (
     WhaleMovementResponse,
 )
 from endpoints.transcation import get_transaction
+from helper.constants import CACHE_MAX_SIZE, KASPA_HASH_LENGTH, MAX_SUPPLY
 from server import app, kaspad_client
 from dbsession import async_session
 from sqlalchemy import text
@@ -26,14 +27,6 @@ from endpoints.stats import (
 
 from server import app, kaspad_client
 from cache import AsyncTTL
-
-CACHE_MAX_SIZE = 10240
-PRECISION = 1e8
-MAX_SUPPLY = 2900000000000000000
-WHALE_TX_THRESHHOLD = 1 * 1e6 * PRECISION
-
-KASPA_ADDRESS_LENGTH = 67
-KASPA_HASH_LENGTH = 64
 
 
 @AsyncTTL(time_to_live=1 * 60, maxsize=CACHE_MAX_SIZE)

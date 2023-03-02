@@ -4,6 +4,7 @@ from endpoints.stats import *
 from endpoints.address import *
 from endpoints.block import *
 from endpoints.transcation import *
+from endpoints.holders import *
 
 from endpoints.dashboard import *
 

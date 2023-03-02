@@ -5,12 +5,18 @@ import requests
 from fastapi import Path, HTTPException, Query
 
 from dbsession import async_session
-from endpoints.models import TranscationsResponse, TxInput, TxModel, TxOutput
+from endpoints.models import (
+    AddressInfoResponse,
+    TranscationsResponse,
+    TxInput,
+    TxOutput,
+)
+from helper.constants import CACHE_MAX_SIZE
 from models.AddressTag import AddressTag
 from models.TxAddrMapping import TxAddrMapping
 from server import app, kaspad_client
 
-from pydantic import BaseModel, parse_obj_as
+from pydantic import parse_obj_as
 from sqlalchemy.future import select
 
 from dbsession import async_session
@@ -18,21 +24,22 @@ from endpoints import filter_fields
 from models.Block import Block
 from models.Transaction import Transaction, TransactionOutput, TransactionInput
 from sqlalchemy import func
-
-PRECISION = 1e8
-
-
-class AddressInfoTag(BaseModel):
-    name: str
-    link: str | None
+from cache import AsyncTTL
 
 
-class AddressInfoResponse(BaseModel):
-    address: str = "kaspa:pzhh76qc82wzduvsrd9xh4zde9qhp0xc8rl7qu2mvl2e42uvdqt75zrcgpm00"
-    balance: int = 38240000000
-    tags: List[AddressInfoTag]
+@AsyncTTL(time_to_live=10 * 60, maxsize=CACHE_MAX_SIZE)
+async def get_addresses_tags(addresses: List[str]):
+    async with async_session() as s:
+        tags = await s.execute(
+            select(AddressTag.address, AddressTag.name, AddressTag.link).where(
+                AddressTag.address.in_(addresses)
+            )
+        )
+
+    return [{"address": tag[0], "name": tag[1], "link": tag[2]} for tag in tags.all()]
 
 
+@AsyncTTL(time_to_live=10 * 60, maxsize=CACHE_MAX_SIZE)
 async def get_address_tags(address: str):
     async with async_session() as s:
         tags = await s.execute(
