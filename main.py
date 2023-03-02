@@ -2,6 +2,7 @@
 import asyncio
 import os
 from asyncio import Task, InvalidStateError
+from urllib.parse import urlparse
 import redis.asyncio as redis
 from fastapi_limiter import FastAPILimiter
 
@@ -26,10 +27,14 @@ async def startup():
 
     # Load redis
     retry = Retry(ExponentialBackoff(), 3)
-    redis_client = redis.from_url(
-        os.environ.get("REDIS_URL")
-        + "?decode_responses=True&encoding=utf-8&ssl_cert_reqs=none",
-        retry=retry,
+    redis_url = urlparse(os.environ.get("REDIS_URL"))
+    redis_client = redis.Redis(
+        host=redis_url.hostname,
+        port=redis_url.port,
+        password=redis_url.password,
+        ssl=True,
+        ssl_cert_reqs=None,
+        retry=retry
     )
     await FastAPILimiter.init(redis_client)
 
