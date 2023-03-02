@@ -2,9 +2,6 @@
 import asyncio
 import os
 from asyncio import Task, InvalidStateError
-from urllib.parse import urlparse
-import redis.asyncio as redis
-from fastapi_limiter import FastAPILimiter
 
 from helper.import_endpoints import *
 from fastapi_utils.tasks import repeat_every
@@ -12,8 +9,6 @@ from starlette.responses import RedirectResponse
 
 from server import app, kaspad_client
 from sockets import blocks
-from redis.backoff import ExponentialBackoff
-from redis.retry import Retry
 
 BLOCKS_TASK = None  # type: Task
 
@@ -24,19 +19,6 @@ async def startup():
     # find kaspad before staring webserver
     await kaspad_client.initialize_all()
     BLOCKS_TASK = asyncio.create_task(blocks.config())
-
-    # Load redis
-    retry = Retry(ExponentialBackoff(), 3)
-    redis_url = urlparse(os.environ.get("REDIS_URL"))
-    redis_client = redis.Redis(
-        host=redis_url.hostname,
-        port=redis_url.port,
-        password=redis_url.password,
-        ssl=True,
-        ssl_cert_reqs=None,
-        retry=retry
-    )
-    await FastAPILimiter.init(redis_client)
 
 
 @app.on_event("startup")
