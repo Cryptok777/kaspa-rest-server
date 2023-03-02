@@ -29,7 +29,7 @@ from server import app, kaspad_client
 from cache import AsyncTTL
 
 
-@AsyncTTL(time_to_live=1 * 60, maxsize=CACHE_MAX_SIZE)
+@AsyncTTL(time_to_live=5 * 60, maxsize=CACHE_MAX_SIZE)
 async def _get_tps():
     sql = f"""
                 SELECT
