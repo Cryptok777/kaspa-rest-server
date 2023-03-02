@@ -11,7 +11,6 @@ from endpoints.models import (
     TxInput,
     TxOutput,
 )
-from helper.constants import CACHE_MAX_SIZE
 from models.AddressTag import AddressTag
 from models.TxAddrMapping import TxAddrMapping
 from server import app, kaspad_client
@@ -27,7 +26,7 @@ from sqlalchemy import func
 from cache import AsyncTTL
 
 
-@AsyncTTL(time_to_live=10 * 60, maxsize=CACHE_MAX_SIZE)
+@AsyncTTL(time_to_live=10 * 60)
 async def get_addresses_tags(addresses: List[str]):
     async with async_session() as s:
         tags = await s.execute(
@@ -39,7 +38,7 @@ async def get_addresses_tags(addresses: List[str]):
     return [{"address": tag[0], "name": tag[1], "link": tag[2]} for tag in tags.all()]
 
 
-@AsyncTTL(time_to_live=10 * 60, maxsize=CACHE_MAX_SIZE)
+@AsyncTTL(time_to_live=10 * 60)
 async def get_address_tags(address: str):
     async with async_session() as s:
         tags = await s.execute(

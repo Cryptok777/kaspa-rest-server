@@ -14,7 +14,7 @@ from endpoints.models import (
     WhaleMovementResponse,
 )
 from endpoints.transcation import get_transaction
-from helper.constants import CACHE_MAX_SIZE, KASPA_HASH_LENGTH, MAX_SUPPLY
+from helper.constants import KASPA_HASH_LENGTH, MAX_SUPPLY
 from server import app, kaspad_client
 from dbsession import async_session
 from sqlalchemy import text
@@ -29,7 +29,7 @@ from server import app, kaspad_client
 from cache import AsyncTTL
 
 
-@AsyncTTL(time_to_live=5 * 60, maxsize=CACHE_MAX_SIZE)
+@AsyncTTL(time_to_live=1 * 60)
 async def _get_tps():
     sql = f"""
                 SELECT
@@ -39,12 +39,12 @@ async def _get_tps():
 
     async with async_session() as session:
         resp = await session.execute(text(sql))
-        resp = resp.all()
+        resp = resp.first()
 
-    if len(resp) == 0 or len(resp[0]) == 0:
+    if len(resp) == 0:
         return 0
 
-    return resp[0][0] / 60
+    return resp[0] / 60
 
 
 @app.get(
@@ -75,7 +75,7 @@ async def get_dashboard_metrics():
     )
 
 
-@AsyncTTL(time_to_live=5 * 60, maxsize=CACHE_MAX_SIZE)
+@AsyncTTL(time_to_live=5 * 60)
 async def _get_market_data():
     async with httpx.AsyncClient() as client:
         resp = await client.get(
@@ -114,7 +114,7 @@ async def get_market_data():
     return await _get_market_data()
 
 
-@AsyncTTL(time_to_live=5 * 60, maxsize=CACHE_MAX_SIZE)
+@AsyncTTL(time_to_live=5 * 60)
 async def _get_whale_movement():
     sql = f"""
                 SELECT
@@ -204,7 +204,7 @@ async def _get_tx_count_graph():
     return result
 
 
-@AsyncTTL(time_to_live=60 * 60, maxsize=CACHE_MAX_SIZE)
+@AsyncTTL(time_to_live=60 * 60)
 async def _get_dashboard_graphs():
     active_address_graph = await _get_active_address_graph()
     tx_count_graph = await _get_tx_count_graph()

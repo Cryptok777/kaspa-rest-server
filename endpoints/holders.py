@@ -3,29 +3,19 @@
 
 from endpoints.address import get_addresses_tags
 from endpoints.models import HoldersListResponse, HoldersOverviewResponse
-from typing import List
 
-from fastapi import Query, Path, HTTPException
-from fastapi import Response
-from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy import text
 
 from dbsession import async_session
-from endpoints.models import BlockModel, BlockResponse
 from endpoints.stats import get_coinsupply
-from endpoints.utils import camel_to_snake_case_deep, kaspadBlockToModel
-from helper.constants import CACHE_MAX_SIZE
 from models.AddressBalance import AddressBalance
-from models.Block import Block
-from models.Transaction import Transaction, TransactionOutput, TransactionInput
-from server import app, kaspad_client
-from sqlalchemy.dialects.postgresql import ARRAY
+from server import app
 from sqlalchemy import func
 from cache import AsyncTTL
 
 
-@AsyncTTL(time_to_live=60 * 60, maxsize=CACHE_MAX_SIZE)
+@AsyncTTL(time_to_live=60 * 60)
 async def get_total_holders():
     async with async_session() as s:
         count_query = select(func.count()).filter(AddressBalance.balance > 0)
