@@ -2,6 +2,8 @@
 import asyncio
 import os
 from asyncio import Task, InvalidStateError
+import redis.asyncio as redis
+from fastapi_limiter import FastAPILimiter
 
 from helper.import_endpoints import *
 from fastapi_utils.tasks import repeat_every
@@ -20,6 +22,13 @@ async def startup():
     # find kaspad before staring webserver
     await kaspad_client.initialize_all()
     BLOCKS_TASK = asyncio.create_task(blocks.config())
+
+    # Load redis
+    redis_client = redis.from_url(
+        os.environ.get("REDIS_TLS_URL")
+        + "?decode_responses=True&encoding=utf-8&ssl_cert_reqs=none"
+    )
+    await FastAPILimiter.init(redis_client)
 
 
 @app.on_event("startup")

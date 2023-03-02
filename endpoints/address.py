@@ -2,7 +2,8 @@
 from typing import Any, List
 import requests
 
-from fastapi import Path, HTTPException, Query
+from fastapi import Path, HTTPException, Query, Depends
+from fastapi_limiter.depends import RateLimiter
 
 from dbsession import async_session
 from endpoints.models import (
@@ -103,6 +104,7 @@ async def get_kaspa_address_info(
     response_model=TranscationsResponse,
     response_model_exclude_unset=True,
     tags=["addresses"],
+    dependencies=[Depends(RateLimiter(times=5, seconds=10))]
 )
 async def get_transactions_for_address(
     kaspaAddress: str = Path(
