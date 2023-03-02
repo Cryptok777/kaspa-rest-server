@@ -161,6 +161,11 @@ class TxModel(BaseModel):
         orm_mode = True
 
 
+class TranscationsResponse(BaseModel):
+    transcations: List[TxModel]
+    total: int
+
+
 class VerboseDataModel(BaseModel):
     hash: str
     difficulty: float

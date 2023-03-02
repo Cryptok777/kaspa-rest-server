@@ -5,7 +5,7 @@ import requests
 from fastapi import Path, HTTPException, Query
 
 from dbsession import async_session
-from endpoints.models import TxInput, TxModel, TxOutput
+from endpoints.models import TranscationsResponse, TxInput, TxModel, TxOutput
 from models.AddressTag import AddressTag
 from models.TxAddrMapping import TxAddrMapping
 from server import app, kaspad_client
@@ -30,7 +30,6 @@ class AddressInfoTag(BaseModel):
 class AddressInfoResponse(BaseModel):
     address: str = "kaspa:pzhh76qc82wzduvsrd9xh4zde9qhp0xc8rl7qu2mvl2e42uvdqt75zrcgpm00"
     balance: int = 38240000000
-    transaction_count: int
     tags: List[AddressInfoTag]
 
 
@@ -84,19 +83,17 @@ async def get_kaspa_address_info(
         balance = 0
 
     tags = await get_address_tags(address=kaspaAddress)
-    transaction_count = await get_transaction_count_for_address(address=kaspaAddress)
 
     return {
         "address": kaspaAddress,
         "balance": balance,
-        "transaction_count": transaction_count,
         "tags": tags,
     }
 
 
 @app.get(
     "/addresses/{kaspaAddress}/transactions",
-    response_model=List[TxModel],
+    response_model=TranscationsResponse,
     response_model_exclude_unset=True,
     tags=["addresses"],
 )
@@ -117,9 +114,11 @@ async def get_transactions_for_address(
     ),
     fields: str = "",
 ):
-    return await get_transactions_for_address_local(
+    transactions = await get_transactions_for_address_local(
         kaspaAddress=kaspaAddress, limit=limit, offset=offset, fields=fields
     )
+    transaction_count = await get_transaction_count_for_address(address=kaspaAddress)
+    return TranscationsResponse(transcations=transactions, total=transaction_count)
 
 
 async def get_transactions_for_address_local(
@@ -226,7 +225,9 @@ async def search_for_transactions_local(transactionIds: List[str], fields: str =
                                 ][int(x.previous_outpoint_index)].amount,
                                 "script_public_key_address": previous_outpoint_txn_map[
                                     x.previous_outpoint_hash
-                                ][int(x.previous_outpoint_index)].script_public_key_address,
+                                ][
+                                    int(x.previous_outpoint_index)
+                                ].script_public_key_address,
                             }
                             for x in tx_inputs
                             if x.transaction_id == tx.Transaction.transaction_id
