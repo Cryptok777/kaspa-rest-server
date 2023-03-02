@@ -189,6 +189,9 @@ async def get_block_transactions(blockId):
                     }
                     for tx_inp in tx_inputs
                     if tx_inp.transaction_id == tx.transaction_id
+                    and previous_outpoint_txn_map.get(
+                        tx_inp.previous_outpoint_hash, {}
+                    ).get(int(tx_inp.previous_outpoint_index))
                 ],
                 "outputs": [
                     {
