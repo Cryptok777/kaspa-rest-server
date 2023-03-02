@@ -25,7 +25,7 @@ async def startup():
 
     # Load redis
     redis_client = redis.from_url(
-        os.environ.get("REDIS_TLS_URL")
+        os.environ.get("REDIS_URL")
         + "?decode_responses=True&encoding=utf-8&ssl_cert_reqs=none"
     )
     await FastAPILimiter.init(redis_client)

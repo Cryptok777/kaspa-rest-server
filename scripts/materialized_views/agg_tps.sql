@@ -16,5 +16,5 @@ REFRESH MATERIALIZED VIEW agg_tps;
 
 SELECT 
   cron.schedule(
-    '*/5 * * * *', $$REFRESH MATERIALIZED VIEW agg_tps$$
+    '*/3 * * * *', $$REFRESH MATERIALIZED VIEW agg_tps$$
   );
