@@ -14,7 +14,7 @@ from endpoints.models import (
     WhaleMovementResponse,
 )
 from endpoints.transcation import get_transaction
-from helper.constants import KASPA_HASH_LENGTH, MAX_SUPPLY
+from helper.constants import KASPA_HASH_LENGTH, MAX_SUPPLY, PRECISION
 from server import app, kaspad_client
 from dbsession import async_session
 from sqlalchemy import text
@@ -67,7 +67,7 @@ async def get_dashboard_metrics():
     return DashboardMetricsResponse(
         block_count=dag_info.get("blockCount"),
         daa_score=dag_info.get("virtualDaaScore"),
-        current_supply=current_supply / 1e9,
+        current_supply=current_supply / PRECISION,
         tps=tps,
         hashrate=hashrate_info.get("hashrate"),
         mined_pct=current_supply / MAX_SUPPLY * 100,
