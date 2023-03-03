@@ -124,6 +124,7 @@ async def _get_whale_movement():
                     ,amount
                     ,block_time
                 FROM agg_whale_movements
+                ORDER BY block_time desc
             """
 
     async with async_session() as session:
