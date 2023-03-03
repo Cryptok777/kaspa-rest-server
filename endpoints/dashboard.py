@@ -35,6 +35,7 @@ async def _get_tps():
                 SELECT
                     count
                 FROM agg_tps
+                LIMIT 1
             """
 
     async with async_session() as session:
