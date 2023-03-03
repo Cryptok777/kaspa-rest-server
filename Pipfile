@@ -21,6 +21,7 @@ greenlet = "*"
 cachetools = "*"
 httpx = "*"
 fastapi-limiter = "*"
+scout-apm = "*"
 
 [dev-packages]
 black = "*"

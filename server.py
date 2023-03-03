@@ -13,9 +13,17 @@ from fastapi.routing import APIRoute
 from kaspad.KaspadMultiClient import KaspadMultiClient
 from fastapi.middleware.gzip import GZipMiddleware
 
+from scout_apm.api import Config
+from scout_apm.async_.starlette import ScoutMiddleware
+
 sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins=[])
 socket_app = socketio.ASGIApp(sio)
 
+Config.set(
+    key=os.environ["SCOUT_KEY"],
+    name="Kaspa Explorer API",
+    monitor=True,
+)
 
 def custom_generate_unique_id(route: APIRoute):
     return f"{route.name}"
@@ -29,6 +37,7 @@ app = FastAPI(
 )
 
 app.add_middleware(GZipMiddleware, minimum_size=500)
+app.add_middleware(ScoutMiddleware)
 
 app.mount("/ws", socket_app)
 
