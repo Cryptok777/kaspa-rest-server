@@ -7,7 +7,7 @@ from fastapi import Path, HTTPException, Query
 from dbsession import async_session
 from endpoints.models import (
     AddressInfoResponse,
-    TranscationsResponse,
+    TransactionsResponse,
     TxInput,
     TxOutput,
 )
@@ -99,7 +99,7 @@ async def get_kaspa_address_info(
 
 @app.get(
     "/addresses/{kaspaAddress}/transactions",
-    response_model=TranscationsResponse,
+    response_model=TransactionsResponse,
     response_model_exclude_unset=True,
     tags=["addresses"],
 )
@@ -124,7 +124,7 @@ async def get_transactions_for_address(
         kaspaAddress=kaspaAddress, limit=limit, offset=offset, fields=fields
     )
     transaction_count = await get_transaction_count_for_address(address=kaspaAddress)
-    return TranscationsResponse(transcations=transactions, total=transaction_count)
+    return TransactionsResponse(transactions=transactions, total=transaction_count)
 
 
 async def get_transactions_for_address_local(
@@ -262,7 +262,7 @@ async def get_transaction_count_for_address(address: str):
     return tx_count.scalar()
 
 
-async def append_input_transcations_info(txs: list[dict[str, Any]]):
+async def append_input_transactions_info(txs: list[dict[str, Any]]):
     if not txs:
         return txs
 
@@ -319,7 +319,7 @@ async def get_transactions_for_address_remote(
         for tx in resp:
             tx["inputs"] = parse_obj_as(List[TxInput], tx["inputs"])
             tx["outputs"] = parse_obj_as(List[TxOutput], tx["outputs"])
-        return await append_input_transcations_info(resp)
+        return await append_input_transactions_info(resp)
 
     return []
 

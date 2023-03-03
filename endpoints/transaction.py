@@ -7,14 +7,14 @@ from pydantic import parse_obj_as
 from sqlalchemy.future import select
 
 from dbsession import async_session
-from endpoints.address import append_input_transcations_info
+from endpoints.address import append_input_transactions_info
 from endpoints.models import TxInput, TxModel, TxOutput
 from models.Block import Block
 from models.Transaction import Transaction, TransactionOutput, TransactionInput
 from server import app
 
 
-async def _get_transcation_local(
+async def _get_transaction_local(
     transactionId: str = Path(regex="[a-f0-9]{64}"),
     inputs: bool = True,
     outputs: bool = True,
@@ -65,12 +65,12 @@ async def _get_transcation_local(
             "outputs": parse_obj_as(List[TxOutput], tx_outputs) if tx_outputs else [],
             "inputs": parse_obj_as(List[TxInput], tx_inputs) if tx_inputs else [],
         }
-        return (await append_input_transcations_info([tx]))[0]
+        return (await append_input_transactions_info([tx]))[0]
     else:
         raise HTTPException(status_code=404, detail="Transaction not found")
 
 
-async def _get_transcation_remote(
+async def _get_transaction_remote(
     transactionId: str = Path(regex="[a-f0-9]{64}"),
     inputs: bool = True,
     outputs: bool = True,
@@ -89,7 +89,7 @@ async def _get_transcation_remote(
         resp["outputs"] = (
             parse_obj_as(List[TxOutput], resp["outputs"]) if resp["outputs"] else []
         )
-        return (await append_input_transcations_info([resp]))[0]
+        return (await append_input_transactions_info([resp]))[0]
 
     raise HTTPException(status_code=404, detail="Transaction not found")
 
@@ -106,10 +106,10 @@ async def get_transaction(
     outputs: bool = True,
 ):
     try:
-        return await _get_transcation_local(
+        return await _get_transaction_local(
             transactionId=transactionId, inputs=inputs, outputs=outputs
         )
     except:
-        return await _get_transcation_remote(
+        return await _get_transaction_remote(
             transactionId=transactionId, inputs=inputs, outputs=outputs
         )

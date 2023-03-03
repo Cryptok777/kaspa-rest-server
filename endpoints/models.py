@@ -173,8 +173,8 @@ class TxModel(BaseModel):
         orm_mode = True
 
 
-class TranscationsResponse(BaseModel):
-    transcations: List[TxModel]
+class TransactionsResponse(BaseModel):
+    transactions: List[TxModel]
     total: int
 
 
@@ -206,7 +206,7 @@ class BlockHeader(BaseModel):
     pruning_point: str
 
 
-class BlockTranscationModel(BaseModel):
+class BlockTransactionModel(BaseModel):
     inputs: None
     outputs: None
     subnetworkId: None

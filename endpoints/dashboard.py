@@ -13,7 +13,7 @@ from endpoints.models import (
     SearchResponse,
     WhaleMovementResponse,
 )
-from endpoints.transcation import get_transaction
+from endpoints.transaction import get_transaction
 from helper.constants import KASPA_HASH_LENGTH, MAX_SUPPLY, PRECISION
 from server import app, kaspad_client
 from dbsession import async_session
@@ -246,7 +246,7 @@ async def get_search_result(query: str):
         if len(query) != KASPA_HASH_LENGTH:
             raise Exception()
         await get_transaction(transactionId=query, inputs=False, outputs=False)
-        return {"result_type": "transcation", "value": query}
+        return {"result_type": "transaction", "value": query}
     except:
         pass
 
