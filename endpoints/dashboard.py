@@ -115,7 +115,7 @@ async def get_market_data():
     return await _get_market_data()
 
 
-@AsyncTTL(time_to_live=5 * 60)
+@AsyncTTL(time_to_live=3 * 60)
 async def _get_whale_movement():
     sql = f"""
                 SELECT
@@ -205,7 +205,7 @@ async def _get_tx_count_graph():
     return result
 
 
-@AsyncTTL(time_to_live=60 * 60)
+@AsyncTTL(time_to_live=30 * 60)
 async def _get_dashboard_graphs():
     active_address_graph = await _get_active_address_graph()
     tx_count_graph = await _get_tx_count_graph()
