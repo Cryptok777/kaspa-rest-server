@@ -12,9 +12,10 @@ CREATE MATERIALIZED VIEW agg_tps AS (
     ) * 1000
 ) WITH NO DATA;
 
-REFRESH MATERIALIZED VIEW agg_tps;
+CREATE UNIQUE INDEX ON agg_tps (last_updated);
+REFRESH MATERIALIZED VIEW CONCURRENTLY agg_tps;
 
 SELECT 
   cron.schedule(
-    '*/2 * * * *', $$REFRESH MATERIALIZED CONCURRENTLY VIEW agg_tps$$
+    '*/2 * * * *', $$REFRESH MATERIALIZED VIEW CONCURRENTLY agg_tps$$
   );

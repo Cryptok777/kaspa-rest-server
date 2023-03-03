@@ -9,9 +9,10 @@ CREATE MATERIALIZED VIEW agg_top_holders AS (
     100
 ) WITH NO DATA;
 
-REFRESH MATERIALIZED VIEW agg_top_holders;
+CREATE UNIQUE INDEX ON agg_top_holders (address);
+REFRESH MATERIALIZED VIEW CONCURRENTLY agg_top_holders;
 
 SELECT 
   cron.schedule(
-    '0 */1 * * *', $$REFRESH MATERIALIZED CONCURRENTLY VIEW agg_top_holders$$
+    '0 */1 * * *', $$REFRESH MATERIALIZED VIEW CONCURRENTLY agg_top_holders$$
   );

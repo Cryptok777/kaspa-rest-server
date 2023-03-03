@@ -21,6 +21,7 @@ CREATE MATERIALIZED VIEW agg_whale_movements AS (
     100
 ) WITH NO DATA;
 
-REFRESH MATERIALIZED VIEW agg_whale_movements;
+CREATE UNIQUE INDEX ON agg_whale_movements (transaction_id, script_public_key_address);
+REFRESH MATERIALIZED VIEW CONCURRENTLY agg_whale_movements;
 
-SELECT cron.schedule('*/8 * * * *', $$REFRESH MATERIALIZED CONCURRENTLY VIEW agg_whale_movements$$);
+SELECT cron.schedule('*/8 * * * *', $$REFRESH MATERIALIZED VIEW CONCURRENTLY agg_whale_movements$$);
