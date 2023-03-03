@@ -23,4 +23,4 @@ CREATE MATERIALIZED VIEW agg_whale_movements AS (
 
 REFRESH MATERIALIZED VIEW agg_whale_movements;
 
-SELECT cron.schedule('*/8 * * * *', $$REFRESH MATERIALIZED VIEW agg_whale_movements$$);
+SELECT cron.schedule('*/8 * * * *', $$REFRESH MATERIALIZED CONCURRENTLY VIEW agg_whale_movements$$);
