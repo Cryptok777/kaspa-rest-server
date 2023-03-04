@@ -1,14 +1,14 @@
 CREATE MATERIALIZED VIEW agg_tps AS (
-  Select 
-    COUNT(*), 
-    now() as last_updated 
-  from 
-    transactions 
-  where 
+  Select
+    COUNT(*) / 5 as count,
+    now() as last_updated
+  from
+    transactions
+  where
     block_time >= extract(
-      epoch 
-      from 
-        (now() - INTERVAL '1 minute')
+      epoch
+      from
+        (now() - INTERVAL '5 minute')
     ) * 1000
 ) WITH NO DATA;
 
