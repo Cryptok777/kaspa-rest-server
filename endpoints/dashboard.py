@@ -45,7 +45,7 @@ async def _get_tps():
     if len(resp) == 0:
         return 0
 
-    return resp[0] / 60
+    return resp[0]
 
 
 @app.get(

@@ -1,6 +1,6 @@
 CREATE MATERIALIZED VIEW agg_tps AS (
   Select
-    COUNT(*) / 5 as count,
+    COUNT(*) / 5 / 60 as count,
     now() as last_updated
   from
     transactions
@@ -13,7 +13,7 @@ CREATE MATERIALIZED VIEW agg_tps AS (
 ) WITH NO DATA;
 
 CREATE UNIQUE INDEX ON agg_tps (last_updated);
-REFRESH MATERIALIZED VIEW CONCURRENTLY agg_tps;
+REFRESH MATERIALIZED VIEW agg_tps;
 
 SELECT 
   cron.schedule(
