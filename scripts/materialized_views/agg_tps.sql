@@ -1,6 +1,6 @@
 CREATE MATERIALIZED VIEW agg_tps AS (
   Select
-    COUNT(*) / 5 / 60 as count,
+    COUNT(*)::decimal / 5 / 60 as count,
     now() as last_updated
   from
     transactions

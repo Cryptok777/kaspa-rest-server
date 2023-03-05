@@ -256,7 +256,9 @@ async def get_transaction_count_for_address(address: str):
     """
 
     async with async_session() as s:
-        count_query = select(func.count()).filter(TxAddrMapping.address == address)
+        count_query = select(func.count(TxAddrMapping.address)).filter(
+            TxAddrMapping.address == address
+        )
         tx_count = await s.execute(count_query)
 
     return tx_count.scalar()
@@ -272,7 +274,7 @@ async def append_input_transactions_info(txs: list[dict[str, Any]]):
         for input_tx in tx.get("inputs", []):
             pending_input_txs.append(input_tx.previous_outpoint_hash)
 
-    fetched_input_txs = search_for_transactions_remote(
+    fetched_input_txs = await search_for_transactions_local(
         transactionIds=pending_input_txs, fields="outputs"
     )
 
@@ -304,36 +306,3 @@ async def append_input_transactions_info(txs: list[dict[str, Any]]):
 
     # sort txs by block_time
     return sorted(txs, key=lambda x: x["block_time"], reverse=True)
-
-
-async def get_transactions_for_address_remote(
-    kaspaAddress: str,
-    limit: int,
-    offset: int,
-):
-    resp = requests.get(
-        f"https://api.kaspa.org/addresses/{kaspaAddress}/full-transactions?limit={limit}&offset={offset}",
-    )
-    if resp.status_code == 200:
-        resp = resp.json()
-        for tx in resp:
-            tx["inputs"] = parse_obj_as(List[TxInput], tx["inputs"])
-            tx["outputs"] = parse_obj_as(List[TxOutput], tx["outputs"])
-        return await append_input_transactions_info(resp)
-
-    return []
-
-
-def search_for_transactions_remote(transactionIds: List[str], fields: str = ""):
-    resp = requests.post(
-        "https://api.kaspa.org/transactions/search",
-        json={"transactionIds": transactionIds},
-    )
-    if resp.status_code == 200:
-        resp = resp.json()
-        for tx in resp:
-            tx["inputs"] = parse_obj_as(List[TxInput], tx["inputs"] or [])
-            tx["outputs"] = parse_obj_as(List[TxOutput], tx["outputs"])
-        return resp
-
-    return []

@@ -70,30 +70,6 @@ async def _get_transaction_local(
         raise HTTPException(status_code=404, detail="Transaction not found")
 
 
-async def _get_transaction_remote(
-    transactionId: str = Path(regex="[a-f0-9]{64}"),
-    inputs: bool = True,
-    outputs: bool = True,
-):
-    """
-    Get tx information for a given tx id
-    """
-    resp = requests.get(
-        f"https://api.kaspa.org/transactions/{transactionId}?inputs={inputs}&outputs={outputs}",
-    )
-    if resp.status_code == 200:
-        resp = resp.json()
-        resp["inputs"] = (
-            parse_obj_as(List[TxInput], resp["inputs"]) if resp["inputs"] else []
-        )
-        resp["outputs"] = (
-            parse_obj_as(List[TxOutput], resp["outputs"]) if resp["outputs"] else []
-        )
-        return (await append_input_transactions_info([resp]))[0]
-
-    raise HTTPException(status_code=404, detail="Transaction not found")
-
-
 @app.get(
     "/transactions/{transactionId}",
     response_model=TxModel,
@@ -105,11 +81,6 @@ async def get_transaction(
     inputs: bool = True,
     outputs: bool = True,
 ):
-    try:
-        return await _get_transaction_local(
-            transactionId=transactionId, inputs=inputs, outputs=outputs
-        )
-    except:
-        return await _get_transaction_remote(
-            transactionId=transactionId, inputs=inputs, outputs=outputs
-        )
+    return await _get_transaction_local(
+        transactionId=transactionId, inputs=inputs, outputs=outputs
+    )
