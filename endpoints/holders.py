@@ -52,7 +52,13 @@ async def get_holders_overview():
 
     return HoldersOverviewResponse(
         holders_count=total_holders,
-        top_100_holder=sum(address["balance"] for address in addresses)
+        top_1000_holder=sum(address["balance"] for address in addresses[:1000])
+        / current_supply
+        * 100,
+        top_500_holder=sum(address["balance"] for address in addresses[:500])
+        / current_supply
+        * 100,
+        top_100_holder=sum(address["balance"] for address in addresses[:100])
         / current_supply
         * 100,
         top_50_holder=sum(address["balance"] for address in addresses[:50])

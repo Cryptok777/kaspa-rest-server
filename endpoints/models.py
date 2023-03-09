@@ -229,6 +229,8 @@ class HoldersOverviewResponse(BaseModel):
     top_10_holder: float
     top_50_holder: float
     top_100_holder: float
+    top_500_holder: float
+    top_1000_holder: float
 
 
 class HolderModel(BaseModel):

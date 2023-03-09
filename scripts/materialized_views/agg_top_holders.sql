@@ -6,7 +6,7 @@ CREATE MATERIALIZED VIEW agg_top_holders AS (
   ORDER BY 
     balance DESC 
   LIMIT 
-    100
+    1000
 ) WITH NO DATA;
 
 CREATE UNIQUE INDEX ON agg_top_holders (address);

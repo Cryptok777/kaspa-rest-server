@@ -1,6 +1,6 @@
 # encoding: utf-8
 import os
-import traceback
+from dotenv import load_dotenv
 
 import socketio
 from fastapi import FastAPI
@@ -18,6 +18,8 @@ from scout_apm.async_.starlette import ScoutMiddleware
 
 sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins=[])
 socket_app = socketio.ASGIApp(sio)
+
+load_dotenv(override=True)
 
 Config.set(
     key=os.environ["SCOUT_KEY"],
