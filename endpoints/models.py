@@ -89,11 +89,15 @@ class DashboardMetricsResponse(BaseModel):
     block_count: int
     daa_score: int
     tps: float
+    bps: float
     current_supply: int
     hashrate: float
     mined_pct: float
+    current_reward: float
     next_halving_timestamp: int
     next_halving_reward: float
+    header_count: int
+    current_addresses_count: int
 
 
 class MarketResponse(BaseModel):

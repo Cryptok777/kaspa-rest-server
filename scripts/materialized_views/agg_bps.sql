@@ -1,5 +1,5 @@
 CREATE MATERIALIZED VIEW agg_bps AS (
-  Select
+  SELECT
     COUNT(hash)::decimal / 5 / 60 as count,
     now() as last_updated
   from

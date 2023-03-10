@@ -6,6 +6,7 @@ import httpx
 
 from fastapi import Response
 from endpoints.block import get_block
+from endpoints.holders import get_total_holders
 from endpoints.models import (
     DashboardMetricsResponse,
     GraphsResponse,
@@ -20,6 +21,7 @@ from dbsession import async_session
 from sqlalchemy import text
 
 from endpoints.stats import (
+    _get_block_reward,
     get_coinsupply,
     get_halving,
     get_hashrate,
@@ -48,6 +50,25 @@ async def _get_tps():
     return resp[0]
 
 
+@AsyncTTL(time_to_live=1 * 60)
+async def _get_bps():
+    sql = f"""
+                SELECT
+                    count
+                FROM agg_bps
+                LIMIT 1
+            """
+
+    async with async_session() as session:
+        resp = await session.execute(text(sql))
+        resp = resp.first()
+
+    if len(resp) == 0:
+        return 0
+
+    return resp[0]
+
+
 @app.get(
     "/dashboard/metrics",
     response_model=DashboardMetricsResponse,
@@ -57,22 +78,27 @@ async def get_dashboard_metrics():
     dag_info = (await kaspad_client.request("getBlockDagInfoRequest")).get(
         "getBlockDagInfoResponse"
     )
-
     coin_supply_info = await get_coinsupply()
     halving_info = get_halving(dag_info)
     hashrate_info = get_hashrate(dag_info)
     current_supply = int(coin_supply_info.get("circulatingSupply", 0))
     tps = await _get_tps()
+    bps = await _get_bps()
+    current_addresses_count = await get_total_holders()
 
     return DashboardMetricsResponse(
         block_count=dag_info.get("blockCount"),
+        header_count=dag_info.get("headerCount"),
         daa_score=dag_info.get("virtualDaaScore"),
         current_supply=current_supply / PRECISION,
         tps=tps,
+        bps=bps,
         hashrate=hashrate_info.get("hashrate"),
         mined_pct=current_supply / MAX_SUPPLY * 100,
+        current_reward=_get_block_reward(dag_info).get("blockreward"),
         next_halving_timestamp=halving_info.get("nextHalvingTimestamp") * 1e3,
         next_halving_reward=halving_info.get("nextHalvingAmount"),
+        current_addresses_count=current_addresses_count,
     )
 
 

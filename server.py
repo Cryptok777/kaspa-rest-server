@@ -21,11 +21,12 @@ socket_app = socketio.ASGIApp(sio)
 
 load_dotenv(override=True)
 
-Config.set(
-    key=os.environ["SCOUT_KEY"],
-    name="Kaspa Explorer API",
-    monitor=True,
-)
+if os.environ["SCOUT_KEY"]:
+    Config.set(
+        key=os.environ["SCOUT_KEY"],
+        name="Kaspa Explorer API",
+        monitor=True,
+    )
 
 def custom_generate_unique_id(route: APIRoute):
     return f"{route.name}"
