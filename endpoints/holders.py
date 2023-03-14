@@ -2,7 +2,11 @@
 
 
 from endpoints.address import get_addresses_tags
-from endpoints.models import HoldersListResponse, HoldersOverviewResponse
+from endpoints.models import (
+    HoldersListResponse,
+    HoldersOverviewResponse,
+    HoldersStatisticsChartResponse,
+)
 
 from sqlalchemy import select
 from sqlalchemy import text
@@ -13,6 +17,8 @@ from models.AddressBalance import AddressBalance
 from server import app
 from sqlalchemy import func
 from cache import AsyncTTL
+
+import calendar
 
 
 @AsyncTTL(time_to_live=60 * 60)
@@ -114,3 +120,39 @@ async def get_holders_list():
             for address in addresses
         ]
     )
+
+
+@AsyncTTL(time_to_live=30 * 60)
+async def _get_statistics_chart():
+    columns = [f"addresses_in_1e{i}" for i in range(2, 11)]
+    sql = f"""
+                SELECT 
+                     {",".join(columns)}
+                    ,created_at
+                FROM agg_address_statistics
+                WHERE created_at > current_date - interval '90' day
+                ORDER BY created_at ASC;
+            """
+
+    async with async_session() as session:
+        resp = await session.execute(text(sql))
+        resp = resp.all()
+
+    chart_data = []
+    for row in resp:
+        row_data = {}
+        for index in range(len(columns)):
+            row_data[columns[index]] = row[index]
+        row_data["timestamp"] = calendar.timegm(row[index + 1].utctimetuple())
+        chart_data.append(row_data)
+
+    return {"chartData": chart_data}
+
+
+@app.get(
+    "/holders/statistics_chart",
+    response_model=HoldersStatisticsChartResponse,
+    tags=["holders"],
+)
+async def get_statistics_chart():
+    return await _get_statistics_chart()

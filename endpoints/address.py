@@ -256,7 +256,7 @@ async def get_transaction_count_for_address(address: str):
     """
 
     async with async_session() as s:
-        count_query = select(func.count(TxAddrMapping.address)).filter(
+        count_query = select(func.count()).filter(
             TxAddrMapping.address == address
         )
         tx_count = await s.execute(count_query)
