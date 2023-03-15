@@ -5,7 +5,7 @@ from endpoints.address import get_addresses_tags
 from endpoints.models import (
     HoldersListResponse,
     HoldersOverviewResponse,
-    HoldersStatisticsChartResponse,
+    DistributionTrendChartResponse,
 )
 
 from sqlalchemy import select
@@ -123,7 +123,7 @@ async def get_holders_list():
 
 
 @AsyncTTL(time_to_live=30 * 60)
-async def _get_statistics_chart():
+async def _get_distribution_trend_chart():
     columns = [f"addresses_in_1e{i}" for i in range(2, 11)]
     sql = f"""
                 SELECT 
@@ -150,9 +150,9 @@ async def _get_statistics_chart():
 
 
 @app.get(
-    "/holders/statistics_chart",
-    response_model=HoldersStatisticsChartResponse,
+    "/holders/distribution_trend",
+    response_model=DistributionTrendChartResponse,
     tags=["holders"],
 )
-async def get_statistics_chart():
-    return await _get_statistics_chart()
+async def get_distribution_trend_chart():
+    return await _get_distribution_trend_chart()

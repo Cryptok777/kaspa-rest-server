@@ -248,7 +248,7 @@ class HoldersListResponse(BaseModel):
     holders: List[HolderModel]
 
 
-class HoldersStatisticsResponse(BaseModel):
+class DistributionTrendResponse(BaseModel):
     timestamp: int
     addresses_in_1e2: int
     addresses_in_1e3: int
@@ -261,5 +261,5 @@ class HoldersStatisticsResponse(BaseModel):
     addresses_in_1e10: int
 
 
-class HoldersStatisticsChartResponse(BaseModel):
-    chartData: List[HoldersStatisticsResponse]
+class DistributionTrendChartResponse(BaseModel):
+    chartData: List[DistributionTrendResponse]
