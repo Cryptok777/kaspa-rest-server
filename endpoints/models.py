@@ -172,6 +172,7 @@ class TxModel(BaseModel):
     accepting_block_blue_score: int | None
     inputs: List[TxInput] | None
     outputs: List[TxOutput] | None
+    confirmations: int | None
 
     class Config:
         orm_mode = True

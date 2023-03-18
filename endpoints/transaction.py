@@ -9,6 +9,7 @@ from sqlalchemy.future import select
 from dbsession import async_session
 from endpoints.address import append_input_transactions_info
 from endpoints.models import TxInput, TxModel, TxOutput
+from endpoints.stats import get_virtual_selected_parent_blue_score
 from models.Block import Block
 from models.Transaction import Transaction, TransactionOutput, TransactionInput
 from server import app
@@ -52,6 +53,7 @@ async def _get_transaction_local(
             tx_inputs = tx_inputs.scalars().all()
 
     if tx:
+        blue_score = (await get_virtual_selected_parent_blue_score()).get("blueScore", 0)
         tx = {
             "subnetwork_id": tx.Transaction.subnetwork_id,
             "transaction_id": tx.Transaction.transaction_id,
@@ -60,6 +62,7 @@ async def _get_transaction_local(
             "block_hash": tx.Transaction.block_hash,
             "block_time": tx.Transaction.block_time,
             "is_accepted": tx.Transaction.is_accepted,
+            "confirmations": int(blue_score) - (tx.blue_score or 0),
             "accepting_block_hash": tx.Transaction.accepting_block_hash,
             "accepting_block_blue_score": tx.blue_score,
             "outputs": parse_obj_as(List[TxOutput], tx_outputs) if tx_outputs else [],

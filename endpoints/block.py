@@ -8,6 +8,7 @@ from sqlalchemy import select
 
 from dbsession import async_session
 from endpoints.models import BlockModel, BlockResponse
+from endpoints.stats import get_virtual_selected_parent_blue_score
 from endpoints.utils import camel_to_snake_case_deep, kaspadBlockToModel
 from models.Block import Block
 from models.Transaction import Transaction, TransactionOutput, TransactionInput
@@ -41,7 +42,10 @@ async def get_block(response: Response, blockId: str = Path(regex="[a-f0-9]{64}"
     # We found the block, now we guarantee it contains the transactions
     # It's possible that the block from kaspad does not contain transactions
     if "transactions" not in requested_block or not requested_block["transactions"]:
-        requested_block["transactions"] = await get_block_transactions(blockId)
+        blue_score = requested_block.get("header", {}).get("blue_score")
+        requested_block["transactions"] = await get_block_transactions(
+            blockId, int(blue_score)
+        )
 
     return requested_block
 
@@ -121,9 +125,10 @@ Get the transactions associated with a block
 """
 
 
-async def get_block_transactions(blockId):
+async def get_block_transactions(blockId, block_blue_score):
     # create tx data
     tx_list = []
+    blue_score = (await get_virtual_selected_parent_blue_score()).get("blueScore", 0)
 
     async with async_session() as s:
         transactions = await s.execute(
@@ -168,6 +173,7 @@ async def get_block_transactions(blockId):
                 previous_outpoint_txn_map[tx.transaction_id] = {}
             previous_outpoint_txn_map[tx.transaction_id][tx.index] = tx
 
+    confirmations = int(blue_score) - (block_blue_score or 0)
     for tx in transactions:
         tx_list.append(
             {
@@ -212,6 +218,7 @@ async def get_block_transactions(blockId):
                 "block_hash": tx.block_hash,
                 "block_time": tx.block_time,
                 "is_accepted": tx.is_accepted,
+                "confirmations": confirmations,
             }
         )
 

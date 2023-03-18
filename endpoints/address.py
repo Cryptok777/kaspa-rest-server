@@ -11,6 +11,7 @@ from endpoints.models import (
     TxInput,
     TxOutput,
 )
+from endpoints.stats import get_virtual_selected_parent_blue_score
 from models.AddressTag import AddressTag
 from models.TxAddrMapping import TxAddrMapping
 from server import app, kaspad_client
@@ -200,6 +201,7 @@ async def search_for_transactions_local(transactionIds: List[str], fields: str =
         else:
             tx_outputs = []
 
+    blue_score = (await get_virtual_selected_parent_blue_score()).get("blueScore", 0)
     return list(
         (
             filter_fields(
@@ -211,6 +213,7 @@ async def search_for_transactions_local(transactionIds: List[str], fields: str =
                     "block_hash": tx.Transaction.block_hash,
                     "block_time": tx.Transaction.block_time,
                     "is_accepted": tx.Transaction.is_accepted,
+                    "confirmations": int(blue_score) - (tx.blue_score or 0),
                     "accepting_block_hash": tx.Transaction.accepting_block_hash,
                     "accepting_block_blue_score": tx.blue_score,
                     "outputs": parse_obj_as(
@@ -256,9 +259,7 @@ async def get_transaction_count_for_address(address: str):
     """
 
     async with async_session() as s:
-        count_query = select(func.count()).filter(
-            TxAddrMapping.address == address
-        )
+        count_query = select(func.count()).filter(TxAddrMapping.address == address)
         tx_count = await s.execute(count_query)
 
     return tx_count.scalar()
