@@ -257,7 +257,7 @@ async def get_dashboard_graphs():
 async def get_search_result(query: str):
     query = query.strip().lower()
 
-    if query.startswith("kaspa:"):
+    if query.startswith("kaspa"):
         return {"result_type": "address", "value": query}
 
     try:
