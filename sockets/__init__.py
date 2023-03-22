@@ -11,7 +11,6 @@ VALID_ROOMS = ["blocks", "coinsupply", "blockdag", "bluescore"]
 @sio.on("join-room")
 async def join_room(sid, room_name):
     if room_name in VALID_ROOMS:
-        print(f"{sid} joining {room_name}")
         sio.enter_room(sid, room_name)
 
         if room_name == "blockdag":
