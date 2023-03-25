@@ -182,22 +182,20 @@ async def get_block_transactions(blockId, block_blue_score):
                         "transaction_id": tx.transaction_id,
                         "index": tx_inp.index,
                         "previous_outpoint_hash": tx_inp.previous_outpoint_hash,
-                        "previous_outpoint_index": int(tx_inp.previous_outpoint_index),
+                        "previous_outpoint_index": tx_inp.previous_outpoint_index,
                         "signature_script": tx_inp.signature_script,
                         "amount": previous_outpoint_txn_map[
                             tx_inp.previous_outpoint_hash
-                        ][int(tx_inp.previous_outpoint_index)].amount,
+                        ][tx_inp.previous_outpoint_index].amount,
                         "script_public_key_address": previous_outpoint_txn_map[
                             tx_inp.previous_outpoint_hash
-                        ][
-                            int(tx_inp.previous_outpoint_index)
-                        ].script_public_key_address,
+                        ][tx_inp.previous_outpoint_index].script_public_key_address,
                     }
                     for tx_inp in tx_inputs
                     if tx_inp.transaction_id == tx.transaction_id
                     and previous_outpoint_txn_map.get(
                         tx_inp.previous_outpoint_hash, {}
-                    ).get(int(tx_inp.previous_outpoint_index))
+                    ).get(tx_inp.previous_outpoint_index)
                 ],
                 "outputs": [
                     {

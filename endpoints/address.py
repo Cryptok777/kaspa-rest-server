@@ -229,18 +229,16 @@ async def search_for_transactions_local(transactionIds: List[str], fields: str =
                                 **x.__dict__,
                                 "amount": previous_outpoint_txn_map[
                                     x.previous_outpoint_hash
-                                ][int(x.previous_outpoint_index)].amount,
+                                ][x.previous_outpoint_index].amount,
                                 "script_public_key_address": previous_outpoint_txn_map[
                                     x.previous_outpoint_hash
-                                ][
-                                    int(x.previous_outpoint_index)
-                                ].script_public_key_address,
+                                ][x.previous_outpoint_index].script_public_key_address,
                             }
                             for x in tx_inputs
                             if x.transaction_id == tx.Transaction.transaction_id
                             and previous_outpoint_txn_map.get(
                                 x.previous_outpoint_hash, {}
-                            ).get(int(x.previous_outpoint_index))
+                            ).get(x.previous_outpoint_index)
                         ],
                     ),
                 },
