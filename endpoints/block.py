@@ -1,16 +1,19 @@
 # encoding: utf-8
+from typing import List
 
 from fastapi import Query, Path, HTTPException
 from fastapi import Response
+from pydantic import BaseModel
 from sqlalchemy import select
 
 from dbsession import async_session
 from endpoints.models import BlockModel, BlockResponse
 from endpoints.stats import get_virtual_selected_parent_blue_score
-from endpoints.utils import kaspadBlockToModel
+from endpoints.utils import camel_to_snake_case_deep, kaspadBlockToModel
 from models.Block import Block
 from models.Transaction import Transaction, TransactionOutput, TransactionInput
 from server import app, kaspad_client
+from sqlalchemy.dialects.postgresql import ARRAY
 
 
 @app.get("/blocks/{blockId}", response_model=BlockModel, tags=["blocks"])
@@ -79,9 +82,6 @@ async def get_block_from_db(blockId):
         requested_block = await s.execute(
             select(Block).where(Block.hash == blockId).limit(1)
         )
-        children_blocks = (
-            await s.execute(select(Block).where(Block.parents.any(blockId)))
-        ).scalars().all()
 
         try:
             requested_block = requested_block.first()[0]  # type: Block
@@ -111,7 +111,7 @@ async def get_block_from_db(blockId):
                 "selected_parent_hash": requested_block.selected_parent_hash,
                 "transaction_ids": [],
                 "blue_score": requested_block.blue_score,
-                "children_hashes": [i.hash for i in children_blocks],
+                "children_hashes": [],
                 "merge_set_blues_hashes": requested_block.merge_set_blues_hashes,
                 "merge_set_reds_hashes": requested_block.merge_set_reds_hashes,
                 "is_chain_block": requested_block.is_chain_block,
