@@ -34,7 +34,7 @@ app = FastAPI(
 
 app.add_middleware(GZipMiddleware, minimum_size=500)
 
-if os.environ["SCOUT_KEY"]:
+if os.environ.get("SCOUT_KEY"):
     Config.set(
         key=os.environ["SCOUT_KEY"],
         name="Kaspa Explorer API",

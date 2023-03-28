@@ -89,6 +89,7 @@ class DashboardMetricsResponse(BaseModel):
     block_count: int
     daa_score: int
     tps: float
+    max_tps: float
     bps: float
     current_supply: int
     hashrate: float

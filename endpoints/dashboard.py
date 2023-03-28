@@ -30,6 +30,25 @@ from endpoints.stats import (
 from server import app, kaspad_client
 from cache import AsyncTTL
 
+@AsyncTTL(time_to_live=60 * 60)
+async def _get_max_tps():
+    sql = f"""
+                SELECT
+                    value
+                FROM agg_stats
+                WHERE key = 'max_tps'
+                ORDER BY created_at DESC
+                LIMIT 1
+            """
+
+    async with async_session() as session:
+        resp = await session.execute(text(sql))
+        resp = resp.first()
+
+    if len(resp) == 0:
+        return 0
+
+    return resp[0]
 
 @AsyncTTL(time_to_live=1 * 60)
 async def _get_tps():
@@ -83,8 +102,10 @@ async def get_dashboard_metrics():
     hashrate_info = get_hashrate(dag_info)
     current_supply = int(coin_supply_info.get("circulatingSupply", 0))
     tps = await _get_tps()
+    max_tps = await _get_max_tps()
     bps = await _get_bps()
     current_addresses_count = await get_total_holders()
+
 
     return DashboardMetricsResponse(
         block_count=dag_info.get("blockCount"),
@@ -92,6 +113,7 @@ async def get_dashboard_metrics():
         daa_score=dag_info.get("virtualDaaScore"),
         current_supply=current_supply / PRECISION,
         tps=tps,
+        max_tps=max_tps,
         bps=bps,
         hashrate=hashrate_info.get("hashrate"),
         mined_pct=current_supply / MAX_SUPPLY * 100,
