@@ -1,7 +1,7 @@
 # encoding: utf-8
-from typing import List
+from datetime import datetime, timedelta
 import os
-import requests
+from collections import Counter
 import httpx
 
 from fastapi import Response
@@ -11,11 +11,14 @@ from endpoints.models import (
     DashboardMetricsResponse,
     GraphsResponse,
     MarketResponse,
+    MinerStatsResponse,
     SearchResponse,
     WhaleMovementResponse,
 )
 from endpoints.transaction import get_transaction
+from helper.block_payload_parser import parse_payload
 from helper.constants import KASPA_HASH_LENGTH, MAX_SUPPLY, PRECISION
+from models.BlockPayload import BlockPayload
 from server import app, kaspad_client
 from dbsession import async_session
 from sqlalchemy import text
@@ -26,9 +29,11 @@ from endpoints.stats import (
     get_halving,
     get_hashrate,
 )
+from sqlalchemy.future import select
 
 from server import app, kaspad_client
 from cache import AsyncTTL
+
 
 @AsyncTTL(time_to_live=60 * 60)
 async def _get_max_tps():
@@ -49,6 +54,7 @@ async def _get_max_tps():
         return 0
 
     return resp[0]
+
 
 @AsyncTTL(time_to_live=1 * 60)
 async def _get_tps():
@@ -105,7 +111,6 @@ async def get_dashboard_metrics():
     max_tps = await _get_max_tps()
     bps = await _get_bps()
     current_addresses_count = await get_total_holders()
-
 
     return DashboardMetricsResponse(
         block_count=dag_info.get("blockCount"),
@@ -299,3 +304,34 @@ async def get_search_result(query: str):
         pass
 
     return {"result_type": "", "value": query}
+
+
+@AsyncTTL(time_to_live=10 * 60)
+async def _get_miner_stats():
+    async with async_session() as s:
+        payloads = await s.execute(
+            select(BlockPayload).filter(
+                BlockPayload.timestamp > datetime.now() - timedelta(days=1)
+            )
+        )
+        addresses = []
+        miners = []
+        for i in payloads.scalars():
+            [address, miner] = parse_payload(i.payload)
+            addresses.append(address)
+            miners.append(miner)
+
+    return {
+        "addresses": dict(Counter(addresses)),
+        "miners": dict(Counter(miners)),
+    }
+
+
+@app.get(
+    "/dashboard/miner_stats",
+    response_model=MinerStatsResponse,
+    tags=["dashboard"],
+)
+async def get_miner_stats():
+    resp = await _get_miner_stats()
+    return resp
