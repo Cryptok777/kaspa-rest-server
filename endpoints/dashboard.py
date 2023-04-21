@@ -311,7 +311,7 @@ async def _get_miner_stats():
     async with async_session() as s:
         payloads = await s.execute(
             select(BlockPayload).filter(
-                BlockPayload.timestamp > datetime.now() - timedelta(days=1)
+                BlockPayload.timestamp > datetime.utcnow() - timedelta(hours=24)
             )
         )
         addresses = []
