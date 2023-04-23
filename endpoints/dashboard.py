@@ -306,7 +306,7 @@ async def get_search_result(query: str):
     return {"result_type": "", "value": query}
 
 
-@AsyncTTL(time_to_live=10 * 60)
+@AsyncTTL(time_to_live=60 * 60)
 async def _get_miner_stats():
     async with async_session() as s:
         payloads = await s.execute(
