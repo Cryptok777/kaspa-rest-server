@@ -56,7 +56,7 @@ async def _get_max_tps():
     return resp[0]
 
 
-@AsyncTTL(time_to_live=1 * 60)
+@AsyncTTL(time_to_live=60 * 60)
 async def _get_tps():
     sql = f"""
                 SELECT
@@ -75,7 +75,7 @@ async def _get_tps():
     return resp[0]
 
 
-@AsyncTTL(time_to_live=1 * 60)
+@AsyncTTL(time_to_live=60 * 60)
 async def _get_bps():
     sql = f"""
                 SELECT
