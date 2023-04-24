@@ -13,5 +13,5 @@ REFRESH MATERIALIZED VIEW agg_bps;
 
 SELECT 
   cron.schedule(
-    '*/2 * * * *', $$REFRESH MATERIALIZED VIEW CONCURRENTLY agg_bps$$
+    '0 0 * * *', $$REFRESH MATERIALIZED VIEW CONCURRENTLY agg_bps$$
   );
