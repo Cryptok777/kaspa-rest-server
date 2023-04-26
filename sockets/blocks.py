@@ -6,6 +6,7 @@ from server import kaspad_client, sio
 BLOCKS_CACHE = []
 TASKS = []
 
+BLOCK_CACHE_SIZE = 100
 
 async def config():
     async def on_new_block(e):
@@ -16,7 +17,7 @@ async def config():
 
         global BLOCKS_CACHE
         BLOCKS_CACHE.append(block_info)
-        if len(BLOCKS_CACHE) > 50:
+        if len(BLOCKS_CACHE) > BLOCK_CACHE_SIZE:
             BLOCKS_CACHE.pop(0)
 
         await sio.emit("new-block", block_info, room="blocks")

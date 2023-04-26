@@ -10,8 +10,8 @@ from server import sio, app
 BLOCKS_CACHE = []
 
 
-@app.on_event("startup")
-@repeat_every(seconds=5)
+# @app.on_event("startup")
+# @repeat_every(seconds=5)
 async def periodical_blue_score():
     await emit_bluescore()
 
