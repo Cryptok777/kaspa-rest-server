@@ -3,6 +3,7 @@
 
 from endpoints.address import get_addresses_tags
 from endpoints.models import (
+    DistributionTrendCategory,
     HoldersListResponse,
     HoldersOverviewResponse,
     DistributionTrendChartResponse,
@@ -139,10 +140,25 @@ async def _get_distribution_trend_chart():
         resp = resp.all()
 
     chart_data = []
-    for row in resp:
+    for row_index, row in enumerate(resp):
         row_data = {}
         for index in range(len(columns)):
-            row_data[columns[index]] = row[index]
+            # Only calculate the percentage for the last row
+            if row_index == len(resp) - 1:
+                # Assume the data interval is 1 hour
+                row_from_24h_ago = resp[row_index - 24]
+                row_from_7d_ago = resp[row_index - 24 * 7]
+                row_from_30d_ago = resp[row_index - 24 * 30]
+
+                row_data[columns[index]] = DistributionTrendCategory(
+                    count=row[index],
+                    change_24h=row[index] / row_from_24h_ago[index],
+                    change_7d=row[index] / row_from_7d_ago[index],
+                    change_30d=row[index] / row_from_30d_ago[index],
+                )
+            else:
+                row_data[columns[index]] = DistributionTrendCategory(count=row[index])
+
         row_data["timestamp"] = calendar.timegm(row[index + 1].utctimetuple())
         chart_data.append(row_data)
 

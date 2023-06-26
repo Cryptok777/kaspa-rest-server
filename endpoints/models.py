@@ -250,17 +250,24 @@ class HoldersListResponse(BaseModel):
     holders: List[HolderModel]
 
 
+class DistributionTrendCategory(BaseModel):
+    count: int
+    change_24h: float | None
+    change_7d: float | None
+    change_30d: float | None
+
+
 class DistributionTrendResponse(BaseModel):
     timestamp: int
-    addresses_in_1e2: int
-    addresses_in_1e3: int
-    addresses_in_1e4: int
-    addresses_in_1e5: int
-    addresses_in_1e6: int
-    addresses_in_1e7: int
-    addresses_in_1e8: int
-    addresses_in_1e9: int
-    addresses_in_1e10: int
+    addresses_in_1e2: DistributionTrendCategory
+    addresses_in_1e3: DistributionTrendCategory
+    addresses_in_1e4: DistributionTrendCategory
+    addresses_in_1e5: DistributionTrendCategory
+    addresses_in_1e6: DistributionTrendCategory
+    addresses_in_1e7: DistributionTrendCategory
+    addresses_in_1e8: DistributionTrendCategory
+    addresses_in_1e9: DistributionTrendCategory
+    addresses_in_1e10: DistributionTrendCategory
 
 
 class DistributionTrendChartResponse(BaseModel):
