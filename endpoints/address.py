@@ -133,6 +133,9 @@ async def get_transactions_for_address_local(
     Get all transactions for a given address from database
     """
     async with async_session() as s:
+        # This query is slow with pagination
+        await s.execute("SET LOCAL statement_timeout TO '10s';")
+
         # Doing it this way as opposed to adding it directly in the IN clause
         # so I can re-use the same result in tx_list, TxInput and TxOutput
         tx_within_limit_offset = await s.execute(
