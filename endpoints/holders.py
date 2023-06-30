@@ -25,6 +25,8 @@ import calendar
 @AsyncTTL(time_to_live=60 * 60)
 async def get_total_holders():
     async with async_session() as s:
+        await s.execute("SET LOCAL statement_timeout TO '10s';")
+
         count_query = select(func.count()).filter(AddressBalance.balance > 0)
         tx_count = await s.execute(count_query)
 
