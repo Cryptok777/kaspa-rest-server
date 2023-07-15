@@ -125,6 +125,14 @@ async def get_holders_list():
     )
 
 
+def get_pct_change(prev, now):
+    if prev != 0:
+        return ((now - prev) / prev) * 100
+    elif prev == 0 and now > 0:
+        return 100
+    else:
+        return 0
+
 @AsyncTTL(time_to_live=30 * 60)
 async def _get_distribution_trend_chart():
     columns = [f"addresses_in_1e{i}" for i in range(2, 11)]
@@ -154,9 +162,9 @@ async def _get_distribution_trend_chart():
 
                 row_data[columns[index]] = DistributionTrendCategory(
                     count=row[index],
-                    change_24h=row[index] / row_from_24h_ago[index],
-                    change_7d=row[index] / row_from_7d_ago[index],
-                    change_30d=row[index] / row_from_30d_ago[index],
+                    change_24h=get_pct_change(row_from_24h_ago[index], row[index]),
+                    change_7d=get_pct_change(row_from_7d_ago[index], row[index]),
+                    change_30d=get_pct_change(row_from_30d_ago[index], row[index]),
                 )
             else:
                 row_data[columns[index]] = DistributionTrendCategory(count=row[index])
