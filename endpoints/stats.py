@@ -13,6 +13,7 @@ from endpoints.models import (
 from server import app, kaspad_client
 
 from helper.deflationary_table import DEFLATIONARY_TABLE
+from cache import AsyncTTL
 
 PREFIX = "info"
 
@@ -52,6 +53,9 @@ async def get_blockreward(stringOnly: bool = False):
     resp = await kaspad_client.request("getBlockDagInfoRequest")
     return _get_block_reward(resp["getBlockDagInfoResponse"])
 
+@AsyncTTL(time_to_live=5)
+async def _get_coin_supply():
+    return await kaspad_client.request("getCoinSupplyRequest")
 
 @app.get(
     f"/{PREFIX}/coinsupply",
@@ -62,7 +66,7 @@ async def get_coinsupply():
     """
     Get $KAS coin supply information
     """
-    resp = await kaspad_client.request("getCoinSupplyRequest")
+    resp = await _get_coin_supply()
     return {
         "circulatingSupply": resp["getCoinSupplyResponse"]["circulatingSompi"],
         "maxSupply": resp["getCoinSupplyResponse"]["maxSompi"],

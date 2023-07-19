@@ -94,15 +94,18 @@ async def _get_bps():
     return resp[0]
 
 
+@AsyncTTL(time_to_live=5)
+async def _get_block_dag_info():
+    return await kaspad_client.request("getBlockDagInfoRequest")
+
+
 @app.get(
     "/dashboard/metrics",
     response_model=DashboardMetricsResponse,
     tags=["dashboard"],
 )
 async def get_dashboard_metrics():
-    dag_info = (await kaspad_client.request("getBlockDagInfoRequest")).get(
-        "getBlockDagInfoResponse"
-    )
+    dag_info = (await _get_block_dag_info()).get("getBlockDagInfoResponse")
     coin_supply_info = await get_coinsupply()
     halving_info = get_halving(dag_info)
     hashrate_info = get_hashrate(dag_info)
