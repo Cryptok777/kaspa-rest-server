@@ -28,11 +28,9 @@ class KaspadClient(object):
             return False
 
     async def request(self, command, params=None, timeout=5):
-        with KaspadThread(self.kaspad_host, self.kaspad_port) as t:
-            return await t.request(
-                command, params, wait_for_response=True, timeout=timeout
-            )
+        async with KaspadThread(self.kaspad_host, self.kaspad_port) as t:
+            return await t.request(command, params, timeout=timeout)
 
     async def notify(self, command, params, callback):
-        t = KaspadThread(self.kaspad_host, self.kaspad_port, async_thread=True)
-        return await t.notify(command, params, callback)
+        async with KaspadThread(self.kaspad_host, self.kaspad_port) as t:
+            return await t.notify(command, params, callback)
