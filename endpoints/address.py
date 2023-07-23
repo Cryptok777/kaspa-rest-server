@@ -51,21 +51,13 @@ async def get_address_tags(address: str):
     return [{"name": tag[0], "link": tag[1]} for tag in tags.all()]
 
 
-@app.get(
-    "/addresses/{kaspaAddress}/info",
-    response_model=AddressInfoResponse,
-    tags=["addresses"],
-)
-async def get_kaspa_address_info(
-    kaspaAddress: str = Path(
-        description="Kaspa address as string e.g. kaspa:pzhh76qc82wzduvsrd9xh4zde9qhp0xc8rl7qu2mvl2e42uvdqt75zrcgpm00",
-    )
-):
+@AsyncTTL(time_to_live=3)
+async def get_address_balance(address: str):
     """
     Get balance for a given kaspa address
     """
     resp = await kaspad_client.request(
-        "getBalanceByAddressRequest", params={"address": kaspaAddress}
+        "getBalanceByAddressRequest", params={"address": address}
     )
 
     try:
@@ -88,6 +80,23 @@ async def get_kaspa_address_info(
     except KeyError:
         balance = 0
 
+    return balance
+
+
+@app.get(
+    "/addresses/{kaspaAddress}/info",
+    response_model=AddressInfoResponse,
+    tags=["addresses"],
+)
+async def get_kaspa_address_info(
+    kaspaAddress: str = Path(
+        description="Kaspa address as string e.g. kaspa:pzhh76qc82wzduvsrd9xh4zde9qhp0xc8rl7qu2mvl2e42uvdqt75zrcgpm00",
+    )
+):
+    """
+    Get balance for a given kaspa address
+    """
+    balance = await get_address_balance(address=kaspaAddress)
     tags = await get_address_tags(address=kaspaAddress)
 
     return {
