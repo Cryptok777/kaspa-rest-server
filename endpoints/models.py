@@ -272,8 +272,3 @@ class DistributionTrendResponse(BaseModel):
 
 class DistributionTrendChartResponse(BaseModel):
     chartData: List[DistributionTrendResponse]
-
-
-class MinerStatsResponse(BaseModel):
-    addresses: Dict[str, int]
-    miners: Dict[str, int]

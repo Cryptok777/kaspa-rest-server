@@ -1,7 +1,5 @@
 # encoding: utf-8
-from datetime import datetime, timedelta
 import os
-from collections import Counter
 import httpx
 
 from fastapi import Response
@@ -11,14 +9,11 @@ from endpoints.models import (
     DashboardMetricsResponse,
     GraphsResponse,
     MarketResponse,
-    MinerStatsResponse,
     SearchResponse,
     WhaleMovementResponse,
 )
 from endpoints.transaction import get_transaction
-from helper.block_payload_parser import parse_payload
 from helper.constants import KASPA_HASH_LENGTH, MAX_SUPPLY, PRECISION
-from models.BlockPayload import BlockPayload
 from server import app, kaspad_client
 from dbsession import async_session
 from sqlalchemy import text
@@ -29,7 +24,6 @@ from endpoints.stats import (
     get_halving,
     get_hashrate,
 )
-from sqlalchemy.future import select
 
 from server import app, kaspad_client
 from cache import AsyncTTL
@@ -307,34 +301,3 @@ async def get_search_result(query: str):
         pass
 
     return {"result_type": "", "value": query}
-
-
-@AsyncTTL(time_to_live=60 * 60)
-async def _get_miner_stats():
-    async with async_session() as s:
-        payloads = await s.execute(
-            select(BlockPayload).filter(
-                BlockPayload.timestamp > datetime.utcnow() - timedelta(hours=24)
-            )
-        )
-        addresses = []
-        miners = []
-        for i in payloads.scalars():
-            [address, miner] = parse_payload(i.payload)
-            addresses.append(address)
-            miners.append(miner)
-
-    return {
-        "addresses": dict(Counter(addresses)),
-        "miners": dict(Counter(miners)),
-    }
-
-
-@app.get(
-    "/dashboard/miner_stats",
-    response_model=MinerStatsResponse,
-    tags=["dashboard"],
-)
-async def get_miner_stats():
-    resp = await _get_miner_stats()
-    return resp
