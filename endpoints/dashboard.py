@@ -13,7 +13,7 @@ from endpoints.models import (
     WhaleMovementResponse,
 )
 from endpoints.transaction import get_transaction
-from helper.constants import KASPA_HASH_LENGTH, MAX_SUPPLY, PRECISION
+from helper.constants import KASPA_HASH_LENGTH, PRECISION
 from server import app, kaspad_client
 from dbsession import async_session
 from sqlalchemy import text
@@ -103,6 +103,7 @@ async def get_dashboard_metrics():
     coin_supply_info = await get_coinsupply()
     halving_info = get_halving(dag_info)
     hashrate_info = get_hashrate(dag_info)
+    max_supply = int(coin_supply_info.get("maxSupply", 0))
     current_supply = int(coin_supply_info.get("circulatingSupply", 0))
     tps = await _get_tps()
     max_tps = await _get_max_tps()
@@ -118,7 +119,7 @@ async def get_dashboard_metrics():
         max_tps=max_tps,
         bps=bps,
         hashrate=hashrate_info.get("hashrate"),
-        mined_pct=current_supply / MAX_SUPPLY * 100,
+        mined_pct=current_supply / max_supply * 100,
         current_reward=_get_block_reward(dag_info).get("blockreward"),
         next_halving_timestamp=halving_info.get("nextHalvingTimestamp") * 1e3,
         next_halving_reward=halving_info.get("nextHalvingAmount"),
