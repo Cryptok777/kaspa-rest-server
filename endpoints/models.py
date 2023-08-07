@@ -93,6 +93,7 @@ class DashboardMetricsResponse(BaseModel):
     bps: float
     current_supply: int
     hashrate: float
+    max_hashrate: float
     mined_pct: float
     current_reward: float
     next_halving_timestamp: int

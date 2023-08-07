@@ -93,6 +93,25 @@ async def _get_block_dag_info():
     return await kaspad_client.request("getBlockDagInfoRequest")
 
 
+@AsyncTTL(time_to_live=5 * 60)
+async def _get_max_hashrate():
+    sql = f"""
+                SELECT
+                    MAX(difficulty) * 2
+                FROM blocks
+                LIMIT 1
+            """
+
+    async with async_session() as session:
+        resp = await session.execute(text(sql))
+        resp = resp.first()
+
+    if len(resp) == 0:
+        return 0
+
+    return resp[0]
+
+
 @app.get(
     "/dashboard/metrics",
     response_model=DashboardMetricsResponse,
@@ -109,6 +128,7 @@ async def get_dashboard_metrics():
     max_tps = await _get_max_tps()
     bps = await _get_bps()
     current_addresses_count = await get_total_holders()
+    max_hashrate = await _get_max_hashrate()
 
     return DashboardMetricsResponse(
         block_count=dag_info.get("blockCount"),
@@ -119,6 +139,7 @@ async def get_dashboard_metrics():
         max_tps=max_tps,
         bps=bps,
         hashrate=hashrate_info.get("hashrate"),
+        max_hashrate=max_hashrate,
         mined_pct=current_supply / max_supply * 100,
         current_reward=_get_block_reward(dag_info).get("blockreward"),
         next_halving_timestamp=halving_info.get("nextHalvingTimestamp") * 1e3,
