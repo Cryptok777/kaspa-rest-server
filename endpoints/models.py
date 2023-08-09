@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Dict, List
 
 from pydantic import BaseModel
@@ -9,10 +10,17 @@ class AddressInfoTag(BaseModel):
     link: str | None
 
 
+class AddressBalanceRecord(BaseModel):
+    address: str
+    balance: int
+    created_at: datetime
+
+
 class AddressInfoResponse(BaseModel):
     address: str
     balance: int
     tags: List[AddressInfoTag]
+    balance_records: List[AddressBalanceRecord]
 
 
 class BlockdagResponse(BaseModel):

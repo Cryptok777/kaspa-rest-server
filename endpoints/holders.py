@@ -1,7 +1,7 @@
 # encoding: utf-8
 
 
-from endpoints.address import get_addresses_tags
+from endpoints.address import get_addresses_balance_records, get_addresses_tags
 from endpoints.models import (
     DistributionTrendCategory,
     HoldersListResponse,
@@ -106,10 +106,31 @@ async def get_holders_list():
         )
 
     addresses_tags = await get_addresses_tags([i["address"] for i in addresses])
+    addresse_balance_records = await get_addresses_balance_records(
+        [i["address"] for i in addresses]
+    )
+
+    # get a map of address -> balance records
+    balance_record_map = {}
+    for record in addresse_balance_records:
+        balance_record_map[record["address"]] = balance_record_map.get(
+            record["address"], True
+        )
+
+    # get a map of address -> tags
     address_tag_map = {}
     for tag in addresses_tags:
         address_tag_map[tag["address"]] = address_tag_map.get(tag["address"], [])
         address_tag_map[tag["address"]].append(tag)
+        # Add a tag for history available
+        if balance_record_map.get(tag["address"]):
+            address_tag_map[tag["address"]].append(
+                {
+                    "address": tag["address"],
+                    "name": "Balance History",
+                    "link": "https://kas.fyi/address/" + tag["address"],
+                }
+            )
 
     current_supply = float((await get_coinsupply())["circulatingSupply"])
 
@@ -132,6 +153,7 @@ def get_pct_change(prev, now):
         return 100
     else:
         return 0
+
 
 @AsyncTTL(time_to_live=30 * 60)
 async def _get_distribution_trend_chart():

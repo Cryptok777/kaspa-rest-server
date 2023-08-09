@@ -12,12 +12,15 @@ from endpoints.models import (
     TxOutput,
 )
 from endpoints.stats import get_virtual_selected_parent_blue_score
+from models.AddressBalancesRecord import AddressBalancesRecord
 from models.AddressTag import AddressTag
 from models.TxAddrMapping import TxAddrMapping
 from server import app, kaspad_client
 
 from pydantic import parse_obj_as
 from sqlalchemy.future import select
+from sqlalchemy import func
+from sqlalchemy import text
 
 from dbsession import async_session
 from endpoints import filter_fields
@@ -37,6 +40,38 @@ async def get_addresses_tags(addresses: List[str]):
         )
 
     return [{"address": tag[0], "name": tag[1], "link": tag[2]} for tag in tags.all()]
+
+
+@AsyncTTL(time_to_live=30 * 60)
+async def get_addresses_balance_records(addresses: List[str], limit: int = 1):
+    subquery = (
+        select(
+            AddressBalancesRecord.address,
+            AddressBalancesRecord.balance,
+            AddressBalancesRecord.created_at,
+            func.row_number()
+            .over(
+                partition_by=AddressBalancesRecord.address,
+                order_by=AddressBalancesRecord.created_at.desc(),
+            )
+            .label("row_num"),
+        ).where(AddressBalancesRecord.address.in_(addresses))
+    ).subquery()
+
+    async with async_session() as s:
+        records = await s.execute(
+            select(subquery.c.address, subquery.c.balance, subquery.c.created_at).where(
+                subquery.c.row_num <= limit
+            )
+        )
+
+    records = records.all()
+    records.reverse()
+
+    return [
+        {"address": record[0], "balance": record[1], "created_at": record[2]}
+        for record in records
+    ]
 
 
 @AsyncTTL(time_to_live=10 * 60)
@@ -98,11 +133,16 @@ async def get_kaspa_address_info(
     """
     balance = await get_address_balance(address=kaspaAddress)
     tags = await get_address_tags(address=kaspaAddress)
+    balance_records = await get_addresses_balance_records(
+        addresses=[kaspaAddress],
+        limit=24 * 7,  # assuming job runs every hour, returns 7 days of data
+    )
 
     return {
         "address": kaspaAddress,
         "balance": balance,
         "tags": tags,
+        "balance_records": balance_records,
     }
 
 
