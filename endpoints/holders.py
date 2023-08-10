@@ -127,8 +127,7 @@ async def get_holders_list():
             address_tag_map[tag["address"]].append(
                 {
                     "address": tag["address"],
-                    "name": "Balance History",
-                    "link": "https://kas.fyi/address/" + tag["address"],
+                    "name": "History Available",
                 }
             )
 
