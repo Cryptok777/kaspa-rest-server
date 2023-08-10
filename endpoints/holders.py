@@ -110,26 +110,11 @@ async def get_holders_list():
         [i["address"] for i in addresses]
     )
 
-    # get a map of address -> balance records
-    balance_record_map = {}
-    for record in addresse_balance_records:
-        balance_record_map[record["address"]] = balance_record_map.get(
-            record["address"], True
-        )
-
     # get a map of address -> tags
     address_tag_map = {}
     for tag in addresses_tags:
         address_tag_map[tag["address"]] = address_tag_map.get(tag["address"], [])
         address_tag_map[tag["address"]].append(tag)
-        # Add a tag for history available
-        if balance_record_map.get(tag["address"]):
-            address_tag_map[tag["address"]].append(
-                {
-                    "address": tag["address"],
-                    "name": "History Available",
-                }
-            )
 
     current_supply = float((await get_coinsupply())["circulatingSupply"])
 
