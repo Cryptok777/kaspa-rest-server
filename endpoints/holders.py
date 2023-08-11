@@ -1,7 +1,7 @@
 # encoding: utf-8
 
 
-from endpoints.address import get_addresses_balance_records, get_addresses_tags
+from endpoints.address import get_addresses_tags
 from endpoints.models import (
     DistributionTrendCategory,
     HoldersListResponse,
@@ -22,7 +22,7 @@ from cache import AsyncTTL
 import calendar
 
 
-@AsyncTTL(time_to_live=60 * 60)
+@AsyncTTL(time_to_live=30 * 60)
 async def get_total_holders():
     async with async_session() as s:
         await s.execute("SET LOCAL statement_timeout TO '10s';")
@@ -33,8 +33,8 @@ async def get_total_holders():
     return tx_count.scalar()
 
 
-@app.get("/holders/overview", response_model=HoldersOverviewResponse, tags=["holders"])
-async def get_holders_overview():
+@AsyncTTL(time_to_live=30 * 60)
+async def _get_holders_overview():
     sql = f"""
                 SELECT  
                     address
@@ -82,8 +82,13 @@ async def get_holders_overview():
     )
 
 
-@app.get("/holders/list", response_model=HoldersListResponse, tags=["holders"])
-async def get_holders_list():
+@app.get("/holders/overview", response_model=HoldersOverviewResponse, tags=["holders"])
+async def get_holders_overview():
+    return await _get_holders_overview()
+
+
+@AsyncTTL(time_to_live=30 * 60)
+async def _get_holders_list():
     sql = f"""
                 SELECT  
                     address
@@ -106,9 +111,6 @@ async def get_holders_list():
         )
 
     addresses_tags = await get_addresses_tags([i["address"] for i in addresses])
-    addresse_balance_records = await get_addresses_balance_records(
-        [i["address"] for i in addresses]
-    )
 
     # get a map of address -> tags
     address_tag_map = {}
@@ -128,6 +130,11 @@ async def get_holders_list():
             for address in addresses
         ]
     )
+
+
+@app.get("/holders/list", response_model=HoldersListResponse, tags=["holders"])
+async def get_holders_list():
+    return await _get_holders_list()
 
 
 def get_pct_change(prev, now):

@@ -53,9 +53,11 @@ async def get_blockreward(stringOnly: bool = False):
     resp = await kaspad_client.request("getBlockDagInfoRequest")
     return _get_block_reward(resp["getBlockDagInfoResponse"])
 
+
 @AsyncTTL(time_to_live=5)
 async def _get_coin_supply():
     return await kaspad_client.request("getCoinSupplyRequest")
+
 
 @app.get(
     f"/{PREFIX}/coinsupply",
