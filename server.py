@@ -21,6 +21,7 @@ socket_app = socketio.ASGIApp(sio)
 
 load_dotenv(override=True)
 
+
 def custom_generate_unique_id(route: APIRoute):
     return f"{route.name}"
 
@@ -67,6 +68,7 @@ if not kaspad_hosts:
     raise Exception("Please set at least KASPAD_HOST_1 environment variable.")
 
 kaspad_client = KaspadMultiClient(kaspad_hosts)
+memory_cache = {}
 
 
 @app.exception_handler(Exception)

@@ -14,7 +14,7 @@ from endpoints.models import (
 )
 from endpoints.transaction import get_transaction
 from helper.constants import KASPA_HASH_LENGTH, PRECISION
-from server import app, kaspad_client
+from server import app, kaspad_client, memory_cache
 from dbsession import async_session
 from sqlalchemy import text
 
@@ -117,7 +117,10 @@ async def _get_max_hashrate():
     response_model=DashboardMetricsResponse,
     tags=["dashboard"],
 )
-async def get_dashboard_metrics():
+async def get_dashboard_metrics(use_cache: bool = True):
+    if use_cache and "dashboard_metrics_cache" in memory_cache:
+        return memory_cache["dashboard_metrics_cache"]
+
     dag_info = (await _get_block_dag_info()).get("getBlockDagInfoResponse")
     coin_supply_info = await get_coinsupply()
     halving_info = get_halving(dag_info)

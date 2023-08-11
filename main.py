@@ -7,7 +7,7 @@ from helper.import_endpoints import *
 from fastapi_utils.tasks import repeat_every
 from starlette.responses import RedirectResponse
 
-from server import app, kaspad_client
+from server import app, kaspad_client, memory_cache
 from sockets import blocks
 
 BLOCKS_TASK = None  # type: Task
@@ -37,6 +37,12 @@ async def watchdog():
         )
         await kaspad_client.initialize_all()
         BLOCKS_TASK = asyncio.create_task(blocks.config())
+
+
+@app.on_event("startup")
+@repeat_every(seconds=5)
+async def refresh_dashboard_metrics():
+    memory_cache['dashboard_metrics_cache'] = await get_dashboard_metrics(use_cache=False)
 
 
 @app.get("/", include_in_schema=False)
