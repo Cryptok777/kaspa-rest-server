@@ -29,6 +29,38 @@ from models.Transaction import Transaction, TransactionOutput, TransactionInput
 from sqlalchemy import func
 from cache import AsyncTTL
 
+MAX_VISIBLE_RANK = 1000
+
+
+@AsyncTTL(time_to_live=60 * 60)
+async def get_address_rank(address: str):
+    sql = f"""
+                WITH RankedAddresses AS (
+                    SELECT  
+                        address,
+                        balance,
+                        RANK() OVER (ORDER BY balance DESC) as rank
+                    FROM address_balances
+                    LIMIT :max_visible_rank
+                )
+
+                SELECT 
+                    rank
+                FROM RankedAddresses
+                WHERE address = :address;
+            """
+
+    async with async_session() as session:
+        resp = await session.execute(
+            text(sql), {"address": address, "max_visible_rank": MAX_VISIBLE_RANK}
+        )
+        resp = resp.all()
+
+    if len(resp) == 0:
+        return None
+
+    return resp[0][0]
+
 
 @AsyncTTL(time_to_live=10 * 60)
 async def get_addresses_tags(addresses: List[str]):
@@ -83,7 +115,13 @@ async def get_address_tags(address: str):
             )
         )
 
-    return [{"name": tag[0], "link": tag[1]} for tag in tags.all()]
+    tags = [{"name": tag[0], "link": tag[1]} for tag in tags.all()]
+
+    rank = await get_address_rank(address=address)
+    if rank:
+        tags.append({"name": "#{}".format(rank), "type": "rank"})
+
+    return tags
 
 
 @AsyncTTL(time_to_live=3)

@@ -8,6 +8,7 @@ class AddressInfoTag(BaseModel):
     address: str | None
     name: str
     link: str | None
+    type: str | None
 
 
 class AddressBalanceRecord(BaseModel):
