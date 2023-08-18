@@ -167,6 +167,8 @@ class TxOutput(BaseModel):
     script_public_key_type: str
     accepting_block_hash: str | None
 
+    spent_tx_hash: str | None
+
     class Config:
         orm_mode = True
 

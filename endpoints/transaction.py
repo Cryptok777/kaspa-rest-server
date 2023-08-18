@@ -1,4 +1,5 @@
 # encoding: utf-8
+from operator import and_, or_
 from typing import List
 import requests
 
@@ -13,6 +14,30 @@ from endpoints.stats import get_virtual_selected_parent_blue_score
 from models.Block import Block
 from models.Transaction import Transaction, TransactionOutput, TransactionInput
 from server import app
+
+
+async def _get_spent_tx_hashes(previous_outpoints: List[tuple[str, int]]):
+    conditions = []
+    for i in previous_outpoints:
+        conditions.append(
+            and_(
+                TransactionInput.previous_outpoint_hash == i[0],
+                TransactionInput.previous_outpoint_index == i[1],
+            )
+        )
+
+    async with async_session() as s:
+        filter_condition = or_(*conditions) if len(conditions) > 1 else conditions[0]
+        tx_inputs = await s.execute(select(TransactionInput).filter(filter_condition))
+        tx_inputs = tx_inputs.scalars().all()
+
+    result = {}
+    for spent_input in tx_inputs:
+        result[
+            (spent_input.previous_outpoint_hash, spent_input.previous_outpoint_index)
+        ] = spent_input.transaction_id
+
+    return result
 
 
 async def _get_transaction_local(
@@ -43,6 +68,16 @@ async def _get_transaction_local(
             )
 
             tx_outputs = tx_outputs.scalars().all()
+            spent_tx_hashes = await _get_spent_tx_hashes(
+                [(i.transaction_id, i.index) for i in tx_outputs]
+            )
+            for output in tx_outputs:
+                output.spent_tx_hash = spent_tx_hashes.get(
+                    (
+                        output.transaction_id,
+                        output.index,
+                    ),
+                )
 
         if inputs:
             tx_inputs = await s.execute(
@@ -53,7 +88,9 @@ async def _get_transaction_local(
             tx_inputs = tx_inputs.scalars().all()
 
     if tx:
-        blue_score = (await get_virtual_selected_parent_blue_score()).get("blueScore", 0)
+        blue_score = (await get_virtual_selected_parent_blue_score()).get(
+            "blueScore", 0
+        )
         tx = {
             "subnetwork_id": tx.Transaction.subnetwork_id,
             "transaction_id": tx.Transaction.transaction_id,
