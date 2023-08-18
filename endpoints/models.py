@@ -263,8 +263,11 @@ class HoldersListResponse(BaseModel):
 class DistributionTrendCategory(BaseModel):
     count: int
     change_24h: float | None
+    change_24h_diff: int | None
     change_7d: float | None
+    change_7d_diff: int | None
     change_30d: float | None
+    change_30d_diff: int | None
 
 
 class DistributionTrendResponse(BaseModel):

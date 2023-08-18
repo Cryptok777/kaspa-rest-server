@@ -176,8 +176,11 @@ async def _get_distribution_trend_chart():
                 row_data[columns[index]] = DistributionTrendCategory(
                     count=row[index],
                     change_24h=get_pct_change(row_from_24h_ago[index], row[index]),
+                    change_24h_diff=row[index] - row_from_24h_ago[index],
                     change_7d=get_pct_change(row_from_7d_ago[index], row[index]),
+                    change_7d_diff=row[index] - row_from_7d_ago[index],
                     change_30d=get_pct_change(row_from_30d_ago[index], row[index]),
+                    change_30d_diff=row[index] - row_from_30d_ago[index],
                 )
             else:
                 row_data[columns[index]] = DistributionTrendCategory(count=row[index])
