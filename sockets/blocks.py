@@ -6,7 +6,7 @@ from server import kaspad_client, sio
 BLOCKS_CACHE = []
 TASKS = []
 
-BLOCK_CACHE_SIZE = 100
+BLOCK_CACHE_SIZE = 5
 
 async def config():
     async def on_new_block(e):
