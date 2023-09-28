@@ -1,12 +1,12 @@
 import sockets
 
-from endpoints.stats import *
-from endpoints.address import *
-from endpoints.block import *
-from endpoints.transaction import *
-from endpoints.holders import *
+# from endpoints.stats import *
+# from endpoints.address import *
+# from endpoints.block import *
+# from endpoints.transaction import *
+# from endpoints.holders import *
 
-from endpoints.dashboard import *
+# from endpoints.dashboard import *
 
 from sockets.blockdag import periodical_blockdag
 from sockets.bluescore import periodical_blue_score
