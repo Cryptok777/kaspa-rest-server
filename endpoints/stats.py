@@ -18,9 +18,6 @@ from cache import AsyncTTL
 PREFIX = "info"
 
 
-@app.get(
-    f"/{PREFIX}/blockdag", response_model=BlockdagResponse, tags=["Kaspa network info"]
-)
 async def get_blockdag():
     """
     Get some global Kaspa BlockDAG information
@@ -41,11 +38,6 @@ def _get_block_reward(dag_info):
     return {"blockreward": reward}
 
 
-@app.get(
-    f"/{PREFIX}/blockreward",
-    response_model=BlockRewardResponse | str,
-    tags=["Kaspa network info"],
-)
 async def get_blockreward(stringOnly: bool = False):
     """
     Returns the current blockreward in KAS/block
@@ -59,11 +51,6 @@ async def _get_coin_supply():
     return await kaspad_client.request("getCoinSupplyRequest")
 
 
-@app.get(
-    f"/{PREFIX}/coinsupply",
-    response_model=CoinSupplyResponse,
-    tags=["Kaspa network info"],
-)
 async def get_coinsupply():
     """
     Get $KAS coin supply information
@@ -105,9 +92,6 @@ def get_hashrate(dag_info):
     return {"hashrate": hashrate}
 
 
-@app.get(
-    f"/{PREFIX}/network", response_model=NetworkResponse, tags=["Kaspa network info"]
-)
 async def get_network():
     """
     Get some global kaspa network information
@@ -116,11 +100,6 @@ async def get_network():
     return resp["getBlockDagInfoResponse"]
 
 
-@app.get(
-    f"/{PREFIX}/virtual-chain-blue-score",
-    response_model=BlockdagResponse,
-    tags=["Kaspa network info"],
-)
 async def get_virtual_selected_parent_blue_score():
     """
     Returns the blue score of virtual selected parent
@@ -129,9 +108,6 @@ async def get_virtual_selected_parent_blue_score():
     return resp["getVirtualSelectedParentBlueScoreResponse"]
 
 
-@app.get(
-    f"/{PREFIX}/health", response_model=HealthResponse, tags=["Kaspa network info"]
-)
 async def health_state():
     """
     Returns the current hashrate for Kaspa network in TH/s.
