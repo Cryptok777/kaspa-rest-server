@@ -18,10 +18,10 @@ class AddressBalanceRecord(BaseModel):
 
 
 class AddressInfoResponse(BaseModel):
-    address: str
+    address: str | None
     balance: int
-    tags: List[AddressInfoTag]
-    balance_records: List[AddressBalanceRecord]
+    tags: List[AddressInfoTag] | None
+    balance_records: List[AddressBalanceRecord] | None
 
 
 class BlockdagResponse(BaseModel):

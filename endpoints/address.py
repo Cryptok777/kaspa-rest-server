@@ -170,26 +170,26 @@ async def get_kaspa_address_info(
     Get balance for a given kaspa address
     """
     balance = await get_address_balance(address=kaspaAddress)
-    tags = await get_address_tags(address=kaspaAddress)
-    balance_records = await get_addresses_balance_records(
-        addresses=[kaspaAddress],
-        limit=24 * 7,  # assuming job runs every hour, returns 7 days of data
-    )
+    # tags = await get_address_tags(address=kaspaAddress)
+    # balance_records = await get_addresses_balance_records(
+    #     addresses=[kaspaAddress],
+    #     limit=24 * 7,  # assuming job runs every hour, returns 7 days of data
+    # )
 
     return {
-        "address": kaspaAddress,
+        # "address": kaspaAddress,
         "balance": balance,
-        "tags": tags,
-        "balance_records": balance_records,
+        # "tags": tags,
+        # "balance_records": balance_records,
     }
 
 
-@app.get(
-    "/addresses/{kaspaAddress}/transactions",
-    response_model=TransactionsResponse,
-    response_model_exclude_unset=True,
-    tags=["addresses"],
-)
+# @app.get(
+#     "/addresses/{kaspaAddress}/transactions",
+#     response_model=TransactionsResponse,
+#     response_model_exclude_unset=True,
+#     tags=["addresses"],
+# )
 async def get_transactions_for_address(
     kaspaAddress: str = Path(
         description="Kaspa address as string e.g. "

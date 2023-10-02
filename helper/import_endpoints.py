@@ -1,7 +1,8 @@
 import sockets
 
-# from endpoints.stats import *
-# from endpoints.address import *
+from endpoints.stats import *
+from endpoints.address import get_kaspa_address_info
+
 # from endpoints.block import *
 # from endpoints.transaction import *
 # from endpoints.holders import *
