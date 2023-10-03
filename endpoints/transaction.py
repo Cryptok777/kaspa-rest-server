@@ -1,5 +1,6 @@
 # encoding: utf-8
-from operator import and_, or_
+from sqlalchemy import or_
+from operator import and_
 from typing import List
 from functools import reduce
 
@@ -28,7 +29,7 @@ async def _get_spent_tx_hashes(previous_outpoints: List[tuple[str, int]]):
         )
 
     async with async_session() as s:
-        filter_condition = reduce(or_, conditions) if len(conditions) > 1 else conditions[0]
+        filter_condition = or_(*conditions)
         tx_inputs = await s.execute(select(TransactionInput).filter(filter_condition))
         tx_inputs = tx_inputs.scalars().all()
 
