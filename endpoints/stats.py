@@ -19,7 +19,7 @@ PREFIX = "info"
 
 
 @app.get(
-    f"/{PREFIX}/blockdag", response_model=BlockdagResponse, tags=["Kaspa network info"]
+    f"/{PREFIX}/blockdag", response_model=NetworkResponse, tags=["Kaspa network info"]
 )
 async def get_blockdag():
     """
